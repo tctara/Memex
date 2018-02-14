@@ -19,6 +19,10 @@ import * as models from 'src/search/search-index-new/models'
 window.index = db
 window.indexModels = models
 
+import Pipeline from 'src/util/pipeline'
+
+window.Pipeline = Pipeline
+
 export const OVERVIEW_URL = '/overview/overview.html'
 export const OLD_EXT_UPDATE_KEY = 'updated-from-old-ext'
 export const UPDATE_URL = '/update/update.html'
