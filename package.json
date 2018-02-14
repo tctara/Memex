@@ -46,6 +46,7 @@
     "level-js": "^2.2.4",
     "levelup": "^2.0.0",
     "lodash": "^4.17.4",
+    "lunr": "^2.1.5",
     "moment": "^2.18.1",
     "moment-timezone": "^0.5.14",
     "normalize-url": "^1.9.1",

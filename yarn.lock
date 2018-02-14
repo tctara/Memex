@@ -5678,6 +5678,10 @@ ltgt@^2.1.2, ltgt@~2.2.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/ltgt/-/ltgt-2.2.0.tgz#b65ba5fcb349a29924c8e333f7c6a5562f2e4842"
 
+lunr@^2.1.5:
+  version "2.1.5"
+  resolved "https://registry.yarnpkg.com/lunr/-/lunr-2.1.5.tgz#826601ccaeac29148e224154b34760faf4d81b70"
+
 make-dir@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/make-dir/-/make-dir-1.0.0.tgz#97a011751e91dd87cfadef58832ebb04936de978"
