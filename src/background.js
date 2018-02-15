@@ -13,14 +13,12 @@ import { OLD_EXT_KEYS } from 'src/options/imports/constants'
 import { index } from 'src/search'
 import analytics from 'src/analytics'
 import updateNotification from 'src/util/update-notification'
+import Pipeline from 'src/util/pipeline/pipeline'
 import db from 'src/search/search-index-new'
 import * as models from 'src/search/search-index-new/models'
 
 window.index = db
 window.indexModels = models
-
-import Pipeline from 'src/util/pipeline'
-
 window.Pipeline = Pipeline
 
 export const OVERVIEW_URL = '/overview/overview.html'

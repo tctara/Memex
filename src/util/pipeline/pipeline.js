@@ -2,13 +2,6 @@ import lunr from 'lunr'
 
 import getPipelineStages from './pipeline-lang-mappings'
 
-// All languages we support need to be statically imported to be included in the bundle; these are just example
-import 'lunr-languages/lunr.de'
-import 'lunr-languages/lunr.fr'
-import 'lunr-languages/lunr.du'
-import 'lunr-languages/lunr.es'
-import 'lunr-languages/lunr.hu'
-
 /**
  * Abstracts away the rest of lunr to provide an interface to
  * the main token-processing pipeline.
