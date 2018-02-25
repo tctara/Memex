@@ -1,5 +1,6 @@
 import randomString from 'src/util/random-string'
 import { SHOULD_TRACK_STORAGE_KEY as SHOULD_TRACK } from 'src/options/privacy/constants'
+import internalAnalytics from './internal'
 
 /**
  * @typedef {Object} EventTrackInfo
@@ -155,6 +156,11 @@ class Analytics {
             e_v: eventArgs.value,
         }
 
+        internalAnalytics.trackEvent({
+            category: eventArgs.category,
+            action: eventArgs.action,
+        })
+
         if (force) {
             await this._sendReq(params)
         } else {
@@ -172,6 +178,7 @@ class Analytics {
             return
         }
 
+        internalAnalytics.trackLink({ linkType, url })
         const params = linkType === 'link' ? { link: url } : { download: url }
         return this._poolReq({ ...params, url })
     }
@@ -186,6 +193,7 @@ class Analytics {
             return
         }
 
+        internalAnalytics.trackPage({ title })
         return this._poolReq({ action_name: encodeURIComponent(title) })
     }
 }

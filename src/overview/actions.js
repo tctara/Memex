@@ -2,7 +2,6 @@ import { createAction } from 'redux-act'
 
 import { generatePageDocId } from 'src/page-storage'
 import analytics, { updateLastActive } from 'src/analytics'
-import internalAnalytics from 'src/analytics/internal'
 import { remoteFunction } from 'src/util/webextensionRPC'
 import { actions as filterActs, selectors as filters } from './filters'
 import * as constants from './constants'
@@ -180,7 +179,6 @@ function trackSearch(searchResult, overwrite, state) {
         : selectors.currentPageDisplay(state)
 
     analytics.trackEvent({ category: 'Search', action, name, value })
-    internalAnalytics.trackEvent({ category: 'Search', action })
 }
 
 const updateSearchResult = ({ searchResult, overwrite = false }) => (
