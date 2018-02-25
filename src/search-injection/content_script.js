@@ -6,20 +6,33 @@ import * as constants from './constants'
 
 import { SEARCH_CONN_NAME, CMDS } from '../overview/constants'
 
-const renderComponent = (id, results) => {
-    // Gets the container using the passed id
-    // Container is where all the search engine's results
-    // are displayed
-    const container = document.getElementById(id)
+const handleRender = (id, results) => {
+    // The actual function to render the results on screen.
+    const renderComponent = () => {
+        // Gets the container using the passed id
+        // Container is where all the search engine's results
+        // are displayed
+        const container = document.getElementById(id)
 
-    // Create a new div and append it as the first child
-    // of the container
-    const target = document.createElement('div')
-    target.setAttribute('id', 'memexResults')
-    container.insertBefore(target, container.firstChild)
+        // Create a new div and append it as the first child
+        // of the container
+        const target = document.createElement('div')
+        target.setAttribute('id', 'memexResults')
+        container.insertBefore(target, container.firstChild)
 
-    // Render our React component on the target element
-    ReactDOM.render(<Results results={results} />, target)
+        // Render our React component on the target element
+        ReactDOM.render(<Results results={results} />, target)
+    }
+
+    // Check if the document has loaded,
+    // if it has, execute the rendering function immediately
+    // else attach it to the DOMContentLoaded event listener
+    if (
+        document.readyState === 'interactive' ||
+        document.readyState === 'complete'
+    )
+        renderComponent()
+    else document.addEventListener('DOMContentLoaded', renderComponent, true)
 }
 
 const cmdHandler = ({ cmd, ...payload }) => {
@@ -30,7 +43,7 @@ const cmdHandler = ({ cmd, ...payload }) => {
             if (payload.searchResult.docs.length) {
                 const containerID = constants.SEARCH_ENGINES.google.container
                 // Pass the container id and the search docs
-                renderComponent(containerID, payload.searchResult.docs)
+                handleRender(containerID, payload.searchResult.docs)
             }
             break
         case CMDS.ERROR:
