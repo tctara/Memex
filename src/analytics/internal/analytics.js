@@ -1,4 +1,8 @@
-import saveToDB from './eventLog.js'
+import {
+    saveToDBEventLog,
+    saveToDBEventLink,
+    saveToDBEventPage,
+} from './eventLog'
 
 class Analytics {
     /**
@@ -12,7 +16,9 @@ class Analytics {
             timestamp: Date.now(),
         }
 
-        await saveToDB(event)
+        if (params.category) await saveToDBEventLog(event)
+        if (params.url) await saveToDBEventLink(event)
+        if (params.action_name) await saveToDBEventPage(event)
     }
 
     /**
