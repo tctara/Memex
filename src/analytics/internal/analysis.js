@@ -42,4 +42,12 @@ export async function searches() {
     const totalTagsUsed = addTags + delTags + filterByTags
 
     console.log({ addTags, delTags, filterByTags, totalTagsUsed })
+
+    // Domains Filtering Analysis
+    const filterByDomain = await db.eventLog
+        .where('category')
+        .equals('Domain')
+        .count()
+
+    console.log({ filterByDomain })
 }
