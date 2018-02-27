@@ -306,12 +306,20 @@ export const setQueryTagsDomains = (input, isEnter) => (dispatch, getState) => {
             if (constants.HASH_TAG_PATTERN.test(term)) {
                 removeFromInputVal(term)
                 dispatch(filterActs.toggleTagFilter(stripTagPattern(term)))
+                analytics.trackEvent({
+                    category: 'Tag',
+                    action: 'Filter by Tag',
+                })
             }
 
             // If 'domain.tld.cctld?' pattern in input, remove it and add to filter state
             if (constants.DOMAIN_TLD_PATTERN.test(term)) {
                 removeFromInputVal(term)
                 dispatch(filterActs.toggleDomainFilter(term))
+                analytics.trackEvent({
+                    category: 'Domain',
+                    action: 'Filter by Domain',
+                })
             }
         })
     }
@@ -322,4 +330,14 @@ export const setQueryTagsDomains = (input, isEnter) => (dispatch, getState) => {
 export const fetchNextTooltip = () => async dispatch => {
     const tooltip = await fetchTooltip()
     dispatch(setTooltip(tooltip))
+}
+
+export const addTagWithTracking = (tag, resultIndex) => dispatch => {
+    analytics.trackEvent({ category: 'Tag', action: 'Add Tag' })
+    dispatch(addTag(tag, resultIndex))
+}
+
+export const delTagWithTracking = (tag, resultIndex) => dispatch => {
+    analytics.trackEvent({ category: 'Tag', action: 'Delete Tag' })
+    dispatch(delTag(tag, resultIndex))
 }

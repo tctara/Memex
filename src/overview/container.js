@@ -319,8 +319,10 @@ const mapDispatchToProps = dispatch => ({
         event.preventDefault()
         dispatch(actions.filterTag(tag))
     },
-    addTag: resultIndex => tag => dispatch(actions.addTag(tag, resultIndex)),
-    delTag: resultIndex => tag => dispatch(actions.delTag(tag, resultIndex)),
+    addTag: resultIndex => tag =>
+        dispatch(actions.addTagWithTracking(tag, resultIndex)),
+    delTag: resultIndex => tag =>
+        dispatch(actions.delTagWithTracking(tag, resultIndex)),
     toggleShowTooltip: event => dispatch(actions.toggleShowTooltip()),
 })
 
