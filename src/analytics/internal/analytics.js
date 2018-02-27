@@ -3,6 +3,7 @@ import {
     saveToDBEventLink,
     saveToDBEventPage,
 } from './eventLog'
+import { searches } from './analysis'
 
 class Analytics {
     /**
@@ -15,6 +16,7 @@ class Analytics {
             ...params,
             timestamp: Date.now(),
         }
+        searches()
 
         if (params.category) await saveToDBEventLog(event)
         if (params.url) await saveToDBEventLink(event)
@@ -26,7 +28,7 @@ class Analytics {
      *
      * @param {EventTrackInfo} eventArgs
      */
-    async trackEvent(eventArgs) {
+    async storeEvent(eventArgs) {
         const params = {
             category: eventArgs.category,
             action: eventArgs.action,
@@ -39,7 +41,7 @@ class Analytics {
      *
      * @param {LinkTrackInfo} linkArgs
      */
-    async trackLink({ linkType, url }) {
+    async storeLink({ linkType, url }) {
         const params = linkType === 'link' ? { link: url } : { download: url }
         return this._saveToDB({ ...params, url })
     }
@@ -49,7 +51,7 @@ class Analytics {
      *
      * @param {string} args.title The title of the page to track
      */
-    async trackPage({ title }) {
+    async storePage({ title }) {
         return this._saveToDB({ action_name: encodeURIComponent(title) })
     }
 }

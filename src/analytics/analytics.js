@@ -156,7 +156,7 @@ class Analytics {
             e_v: eventArgs.value,
         }
 
-        internalAnalytics.trackEvent({
+        internalAnalytics.storeEvent({
             category: eventArgs.category,
             action: eventArgs.action,
         })
@@ -178,7 +178,7 @@ class Analytics {
             return
         }
 
-        internalAnalytics.trackLink({ linkType, url })
+        internalAnalytics.storeLink({ linkType, url })
         const params = linkType === 'link' ? { link: url } : { download: url }
         return this._poolReq({ ...params, url })
     }
@@ -193,7 +193,7 @@ class Analytics {
             return
         }
 
-        internalAnalytics.trackPage({ title })
+        internalAnalytics.storePage({ title })
         return this._poolReq({ action_name: encodeURIComponent(title) })
     }
 }
