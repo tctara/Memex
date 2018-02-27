@@ -173,6 +173,12 @@ function trackSearch(searchResult, overwrite, state) {
     if (filters.onlyBookmarks(state)) {
         action += ' (BM only)'
     }
+    if (filters.tags(state).length) {
+        action += ' (Tag only)'
+    }
+    if (filters.domains(state).length) {
+        action += ' (Domain only)'
+    }
 
     const name = overwrite
         ? selectors.queryParamsDisplay(state)

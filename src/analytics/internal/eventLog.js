@@ -6,8 +6,16 @@ import db from './db'
  * @param {event} event
  */
 export async function saveToDBEventLog(params) {
+    console.log('Here1')
     await db.eventlog.add(params)
-    console.log(await db.eventlog.toArray())
+
+    const count = await db[params.category].toArray()
+
+    await db[params.category].put({
+        id: 0,
+        count: count.length ? count[0].count + 1 : 1,
+    })
+    console.log(await db.Search.toArray())
 
     // let eventLog = (await browser.storage.local.get('event_log'))['event_log']
 
