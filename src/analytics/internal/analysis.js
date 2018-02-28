@@ -1,4 +1,5 @@
 import db from './db'
+import { STORAGE_KEY } from 'src/options/blacklist/constants'
 
 export async function searches() {
     // Search Analysis
@@ -50,4 +51,43 @@ export async function searches() {
         .count()
 
     console.log({ filterByDomain })
+
+    // Blacklist pages
+    const { blacklist } = await browser.storage.local.get(STORAGE_KEY)
+    const blacklistPages = JSON.parse(blacklist).length
+    console.log({ blacklistPages })
+
+    // Bookmarks
+    const popupBookmarksAdd = await db.eventLog
+        .where('action')
+        .equals('Create popup bookmark')
+        .count()
+
+    const popupBookmarksRemove = await db.eventLog
+        .where('action')
+        .equals('Remove popup bookmark')
+        .count()
+
+    const overviewBookmarkAdd = await db.eventLog
+        .where('action')
+        .equals('Create result bookmark')
+        .count()
+
+    const overviewBookmarkRemove = await db.eventLog
+        .where('action')
+        .equals('Remove result bookmark')
+        .count()
+
+    const totalBookmarks =
+        popupBookmarksAdd +
+        overviewBookmarkAdd -
+        popupBookmarksRemove -
+        overviewBookmarkRemove
+    console.log({
+        totalBookmarks,
+        popupBookmarksAdd,
+        overviewBookmarkAdd,
+        popupBookmarksRemove,
+        overviewBookmarkRemove,
+    })
 }
