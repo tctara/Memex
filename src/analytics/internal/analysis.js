@@ -55,7 +55,28 @@ export async function searches() {
     // Blacklist pages
     const { blacklist } = await browser.storage.local.get(STORAGE_KEY)
     const blacklistPages = JSON.parse(blacklist).length
-    console.log({ blacklistPages })
+
+    const blacklistDomainsPopup = await db.eventLog
+        .where('action')
+        .equals('Blacklist domain')
+        .count()
+
+    const blacklistSitesPopup = await db.eventLog
+        .where('action')
+        .equals('Blacklist site')
+        .count()
+
+    const deleteBlacklistPagePopup = await db.eventLog
+        .where('action')
+        .equals('Delete blacklisted page')
+        .count()
+
+    console.log({
+        blacklistPages,
+        blacklistDomainsPopup,
+        blacklistSitesPopup,
+        deleteBlacklistPagePopup,
+    })
 
     // Bookmarks
     const popupBookmarksAdd = await db.eventLog
@@ -90,4 +111,17 @@ export async function searches() {
         popupBookmarksRemove,
         overviewBookmarkRemove,
     })
+
+    // Time filter
+    const startDateSelection = await db.eventLog
+        .where('category')
+        .equals('Overview start date')
+        .count()
+
+    const endDateSelection = await db.eventLog
+        .where('category')
+        .equals('Overview end date')
+        .count()
+
+    console.log({ startDateSelection, endDateSelection })
 }
