@@ -26,17 +26,17 @@ export async function searches() {
     // Tagging Analysis
     const addTags = await db.eventLog
         .where('action')
-        .equals('Add Tag')
+        .equals('Add tag')
         .count()
 
     const delTags = await db.eventLog
         .where('action')
-        .equals('Delete Tag')
+        .equals('Delete tag')
         .count()
 
     const filterByTags = await db.eventLog
         .where('action')
-        .equals('Filter by Tag')
+        .equals('Filter by tag')
         .count()
 
     const totalTagsUsed = addTags + delTags + filterByTags
@@ -46,7 +46,7 @@ export async function searches() {
     // Domains Filtering Analysis
     const filterByDomain = await db.eventLog
         .where('category')
-        .equals('Domain')
+        .equals('domain')
         .count()
 
     console.log({ filterByDomain })

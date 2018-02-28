@@ -331,13 +331,3 @@ export const fetchNextTooltip = () => async dispatch => {
     const tooltip = await fetchTooltip()
     dispatch(setTooltip(tooltip))
 }
-
-export const addTagWithTracking = (tag, resultIndex) => dispatch => {
-    analytics.trackEvent({ category: 'Tag', action: 'Add Tag' })
-    dispatch(addTag(tag, resultIndex))
-}
-
-export const delTagWithTracking = (tag, resultIndex) => dispatch => {
-    analytics.trackEvent({ category: 'Tag', action: 'Delete Tag' })
-    dispatch(delTag(tag, resultIndex))
-}

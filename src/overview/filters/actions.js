@@ -19,23 +19,3 @@ export const showFilter = createAction('search-filters/showFilter')
 export const toggleBookmarkFilter = createAction(
     'search-filters/toggleBookmarkFilter',
 )
-
-export const addTagFilterWithTracking = tag => dispatch => {
-    analytics.trackEvent({ category: 'Tag', action: 'Filter by Tag' })
-    dispatch(addTagFilter(tag))
-}
-
-export const delTagFilterWithTracking = tag => dispatch => {
-    analytics.trackEvent({ category: 'Tag', action: 'Filter by Tag' })
-    dispatch(delTagFilter(tag))
-}
-
-export const addDomainFilterWithTracking = domain => dispatch => {
-    analytics.trackEvent({ category: 'Domain', action: 'Filter by Domain' })
-    dispatch(addDomainFilter(domain))
-}
-
-export const delDomainFilterWithTracking = domain => dispatch => {
-    analytics.trackEvent({ category: 'Domain', action: 'Filter by Domain' })
-    dispatch(delDomainFilter(domain))
-}

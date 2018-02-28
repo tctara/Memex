@@ -111,12 +111,10 @@ const mapDispatchToProps = dispatch => ({
     onShowOnlyBookmarksChange: () => dispatch(actions.toggleBookmarkFilter()),
     clearAllFilters: () => dispatch(actions.resetFilters()),
     handleFilterClick: source => () => dispatch(actions.setFilterPopup(source)),
-    addTagFilter: tag => dispatch(actions.addTagFilterWithTracking(tag)),
-    delTagFilter: tag => dispatch(actions.delTagFilterWithTracking(tag)),
-    addDomainFilter: domain =>
-        dispatch(actions.addDomainFilterWithTracking(domain)),
-    delDomainFilter: domain =>
-        dispatch(actions.delDomainFilterWithTracking(domain)),
+    addTagFilter: tag => dispatch(actions.addTagFilter(tag)),
+    delTagFilter: tag => dispatch(actions.delTagFilter(tag)),
+    addDomainFilter: domain => dispatch(actions.addDomainFilter(domain)),
+    delDomainFilter: domain => dispatch(actions.delDomainFilter(domain)),
     setFilterPopup: source => event => {
         event.preventDefault()
         dispatch(actions.setFilterPopup(source))
