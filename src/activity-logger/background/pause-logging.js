@@ -1,5 +1,6 @@
 /* eslint eqeqeq: 0 */
 import { PAUSE_STORAGE_KEY } from '..'
+import analytics from 'src/analytics'
 
 const getNotifOptions = (message, requireInteraction = false) => ({
     type: 'basic',
@@ -64,6 +65,12 @@ function handlePause(timeout) {
     if (timeout == Infinity) {
         return timeout
     }
+
+    console.log('Here am I')
+    analytics.trackEvent({
+        category: 'Popup',
+        action: 'Resume indexing',
+    })
 
     return setTimeout(() => {
         browser.notifications.create(
