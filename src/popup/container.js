@@ -309,18 +309,10 @@ class PopupContainer extends Component {
 
     handleAddBookmark = () => {
         if (this.bookmarkBtnState === constants.BOOKMARK_BTN_STATE.UNBOOKMARK) {
-            analytics.trackEvent({
-                category: 'Popup',
-                action: 'Create popup bookmark',
-            })
             this.createBookmarkByUrl(this.state.url, this.state.tabID)
         } else if (
             this.bookmarkBtnState === constants.BOOKMARK_BTN_STATE.BOOKMARK
         ) {
-            analytics.trackEvent({
-                category: 'Popup',
-                action: 'Remove popup bookmark',
-            })
             this.removeBookmarkByUrl(this.state.url)
         }
 

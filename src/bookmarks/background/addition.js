@@ -1,5 +1,6 @@
 import { dataURLToBlob } from 'blob-util'
 
+import analytics from 'src/analytics'
 import fetchPageData from 'src/page-analysis/background/fetch-page-data'
 import * as index from 'src/search'
 import db from 'src/pouchdb'
@@ -50,6 +51,11 @@ export async function createNewPageForBookmark(id, bookmarkInfo) {
         const bookmarkDoc = transformToBookmarkDoc(pageDoc)(bookmarkInfo)
         index.addPageConcurrent({ pageDoc, bookmarkDocs: [bookmarkDoc] })
         db.bulkDocs([bookmarkDoc, pageDoc])
+
+        analytics.trackEvent({
+            category: 'Popup',
+            action: 'Create browser bookmark',
+        })
     }
 }
 
@@ -112,4 +118,9 @@ export async function createBookmarkByUrl(url, tabId = null) {
     })
 
     await addBookmarkDoc(pageExist, pageId, pageDoc, bookmarkDoc)
+
+    analytics.trackEvent({
+        category: 'Popup',
+        action: 'Create popup bookmark',
+    })
 }

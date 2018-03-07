@@ -1,3 +1,4 @@
+import analytics from 'src/analytics'
 import { fetchDocTypesByUrl } from 'src/pouchdb'
 import { generatePageDocId } from 'src/page-storage'
 import * as index from 'src/search'
@@ -12,7 +13,14 @@ import { bookmarkKeyPrefix } from '..'
  *  standard indexing-related Error encountered during updates).
  * @returns {Promise<void>}
  */
-async function removeBookmarkByUrl(url) {
+async function removeBookmarkByUrl(url, fromBrowser = false) {
+    analytics.trackEvent({
+        category: 'Popup',
+        action: fromBrowser
+            ? 'Remove browser bookmark'
+            : 'Remove popup bookmark',
+    })
+
     const pageId = generatePageDocId({ url })
     const reverseIndexDoc = await index.initSingleLookup()(pageId)
 

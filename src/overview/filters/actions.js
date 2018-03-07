@@ -1,5 +1,4 @@
 import { createAction } from 'redux-act'
-import analytics from 'src/analytics'
 
 export const setFilterPopup = createAction('search-filters/setFilterPopup')
 export const resetFilterPopup = createAction('search-filters/resetFilterPopup')

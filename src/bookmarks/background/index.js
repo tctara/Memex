@@ -7,7 +7,7 @@ makeRemotelyCallable({ removeBookmarkByUrl })
 
 const removeBookmarkHandler = (id, { node }) =>
     node.url
-        ? removeBookmarkByUrl(node.url)
+        ? removeBookmarkByUrl(node.url, true)
         : console.warn('Cannot remove bookmark with no URL', node)
 
 // Store and index any new browser bookmark
