@@ -1,6 +1,7 @@
 import normalizeUrl from 'src/util/encode-url-for-id'
-import transformPageText from 'src/util/transform-page-text'
-import { DEFAULT_TERM_SEPARATOR, extractContent } from '../util'
+// import transformPageText from 'src/util/transform-page-text'
+import Pipeline from 'src/util/pipeline/pipeline'
+// import { DEFAULT_TERM_SEPARATOR, extractContent } from '../util'
 
 const urlNormalizationOpts = {
     normalizeProtocol: true, // Prepend `http://` if URL is protocol-relative
@@ -12,6 +13,8 @@ const urlNormalizationOpts = {
     skipProtocolTrim: true,
     skipQueryRules: true,
 }
+
+const pipeline = new Pipeline()
 
 /**
  * @param {string} url A raw URL string to attempt to extract parts from.
@@ -46,19 +49,13 @@ export function extractTerms(text) {
         return []
     }
 
-    const { text: transformedText } = transformPageText({ text })
+    const tokens = pipeline.process(text)
 
-    if (!transformedText || !transformedText.length) {
-        return new Set()
+    if (!tokens || !tokens.length) {
+        return []
     }
 
-    return [
-        ...new Set(
-            extractContent(transformedText, {
-                separator: DEFAULT_TERM_SEPARATOR,
-            }),
-        ),
-    ]
+    return [...new Set(tokens.map(token => token.str))]
 }
 
 /**
@@ -69,7 +66,7 @@ export function extractTerms(text) {
  * @param {boolean} [args.rejectNoContent=true] Whether or not to reject if input page data text is empty.
  * @returns {Promise<any>} Resolves to an object containing all data needed for Page model.
  */
-export default function pipeline({
+export default function({
     pageDoc: { content = {}, url, ...data },
     rejectNoContent = true,
 }) {
