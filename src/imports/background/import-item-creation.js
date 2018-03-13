@@ -258,6 +258,12 @@ export default class ImportItemCreator {
 
             const prevCount = itemCount
             const itemsMap = filterByUrl(historyItemBatch)
+
+            // If no items in given period of history, go to next period
+            if (!itemsMap.size) {
+                continue
+            }
+
             itemCount += itemsMap.size
 
             if (itemCount >= this._histLimit) {
