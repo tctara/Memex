@@ -2,6 +2,7 @@ import analytics from 'src/analytics'
 import { fetchDocTypesByUrl } from 'src/pouchdb'
 import { generatePageDocId } from 'src/page-storage'
 import * as index from 'src/search'
+import internalAnalytics from 'src/analytics/internal'
 import deleteDocsByUrl, { deleteDocs } from 'src/page-storage/deletion'
 import { bookmarkKeyPrefix } from '..'
 
@@ -19,6 +20,10 @@ async function removeBookmarkByUrl(url, fromBrowser = false) {
         action: fromBrowser
             ? 'Remove browser bookmark'
             : 'Remove popup bookmark',
+    })
+
+    internalAnalytics.storeEvent({
+        type: fromBrowser ? 'remove_browser_bookmark' : 'remove_popup_bookmark',
     })
 
     const pageId = generatePageDocId({ url })

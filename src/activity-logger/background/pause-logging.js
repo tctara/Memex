@@ -1,6 +1,7 @@
 /* eslint eqeqeq: 0 */
 import { PAUSE_STORAGE_KEY } from '..'
 import analytics from 'src/analytics'
+import internalAnalytics from 'src/analytics/internal'
 
 const getNotifOptions = (message, requireInteraction = false) => ({
     type: 'basic',
@@ -66,10 +67,13 @@ function handlePause(timeout) {
         return timeout
     }
 
-    console.log('Here am I')
     analytics.trackEvent({
         category: 'Popup',
         action: 'Resume indexing',
+    })
+
+    internalAnalytics.storeEvent({
+        type: 'resume_indexing',
     })
 
     return setTimeout(() => {
