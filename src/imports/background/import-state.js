@@ -115,8 +115,7 @@ export class ImportStateManager {
     }
 
     /**
-     * @param {EstimateCounts} args.completed
-     * @param {EstimateCounts} args.remaining
+     * @param {EstimateCounts} ests
      */
     set counts({ completed, remaining }) {
         this.completed = completed
