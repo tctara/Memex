@@ -341,9 +341,9 @@ export class ImportStateManager {
         })
     }
 
-    async _getChunk(chunkKey) {
+    async *_getChunk(chunkKey) {
         const storage = await browser.storage.local.get(chunkKey)
-        return { chunk: storage[chunkKey], chunkKey }
+        yield { chunk: storage[chunkKey], chunkKey }
     }
 
     /**
@@ -410,7 +410,7 @@ export class ImportStateManager {
      */
     async *getItems(includeErrs = false) {
         for (const chunkKey of this.storageKeyStack) {
-            yield await this._getChunk(chunkKey)
+            yield* this._getChunk(chunkKey)
         }
 
         if (includeErrs) {
@@ -420,7 +420,7 @@ export class ImportStateManager {
 
     async *getErrItems() {
         for (const chunkKey of this.errStorageKeyStack) {
-            yield await this._getChunk(chunkKey)
+            yield* this._getChunk(chunkKey)
         }
     }
 
