@@ -9,28 +9,28 @@ class ImportProgressManager {
     static CONCURR_LIMIT = 20
 
     /**
-     * @property {ItemProcessor[]} Currently scheduled processor instances, affording control over execution.
+     * @type {ItemProcessor[]} Currently scheduled processor instances, affording control over execution.
      */
     processors = []
 
     /**
-     * @property {number} Currently set level of concurrency.
+     * @type {number} Currently set level of concurrency.
      */
     _concurrency
 
     /**
-     * @property {boolean} Currently set preference for including previously error'd items in import.
+     * @type {boolean} Currently set preference for including previously error'd items in import.
      */
     processErrors = false
 
     /**
-     * @property {any} Object containing `next` and `complete` methods to run after each item and when
+     * @type {any} Object containing `next` and `complete` methods to run after each item and when
      *  all items complete, respecitively.
      */
     observer
 
     /**
-     * @property {boolean} Flag denoting whether or not current state is stopped or not.
+     * @type {boolean} Flag denoting whether or not current state is stopped or not.
      */
     stopped = false
 

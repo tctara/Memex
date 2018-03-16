@@ -65,17 +65,17 @@ async function getBookmarkTime({ browserId }) {
 
 export default class ImportItemProcessor {
     /**
-     * @property {Function} Function to afford aborting current XHR. Set when import processor reaches XHR point.
+     * @type {Function} Function to afford aborting current XHR. Set when import processor reaches XHR point.
      */
     abortXHR
 
     /**
-     * @property {boolean} Flag denoting whether or not execution has been cancelled.
+     * @type {boolean} Flag denoting whether or not execution has been cancelled.
      */
     cancelled = false
 
     /**
-     * @property {boolean} Flag denoting whether or not execution has finished successfully or not.
+     * @type {boolean} Flag denoting whether or not execution has finished successfully or not.
      */
     finished = false
 

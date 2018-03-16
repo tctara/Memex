@@ -54,43 +54,43 @@ export class ImportStateManager {
     }
 
     /**
-     * @property {any} Object containing boolean flags for each import item type key, representing whether
+     * @type {any} Object containing boolean flags for each import item type key, representing whether
      *  or not that type should be saved to state (user configurable via UI import-type checkboxes).
      */
     allowTypes = ImportStateManager.DEF_ALLOW_TYPES
 
     /**
-     * @property {ItemTypeCount}
+     * @type {ItemTypeCount}
      */
     completed
 
     /**
-     * @property {ItemTypeCount}
+     * @type {ItemTypeCount}
      */
     remaining
 
     /**
-     * @property {number} MS since epoch representing time since last ests calculation.
+     * @type {number} MS since epoch representing time since last ests calculation.
      */
     calculatedAt
 
     /**
-     * @property {string[]} Stack of different storage keys used for storing import items state.
+     * @type {string[]} Stack of different storage keys used for storing import items state.
      */
     storageKeyStack
 
     /**
-     * @property {string[]} Stack of different storage keys used for storing error'd import items state.
+     * @type {string[]} Stack of different storage keys used for storing error'd import items state.
      */
     errStorageKeyStack
 
     /**
-     * @property {number}
+     * @type {number}
      */
     chunkSize
 
     /**
-     * @property {number} Index of the current error chunk
+     * @type {number} Index of the current error chunk
      */
     currErrChunk = 0
 

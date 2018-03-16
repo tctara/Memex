@@ -4,15 +4,18 @@ import ProgressManager from './import-progress'
 
 export default class ImportConnectionHandler {
     /**
-     * @property {runtime.Port} Runtime connection port to afford message communication with UI script
+     * @type {runtime.Port} Runtime connection port to afford message communication with UI script
      */
     port
 
     /**
-     * @property {ImportProgressManager} Importer instance
+     * @type {ImportProgressManager} Importer instance
      */
     importer
 
+    /**
+     * @type {boolean} Used to flag special quick imports on first install.
+     */
     _quickMode
 
     constructor({ port, quick = false }) {
