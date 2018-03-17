@@ -7,19 +7,18 @@ export const appendCss = filename => {
 }
 
 // Generalized functions to get and store
-// variables in browser.storage
+// variables in browser.storage.local
 
 export const getLocalStorage = async (KEY, defVal = '') => {
-    // defVal: Default value of the key to set, when value has not been set
-    const value = (await browser.storage.local.get({
-        [KEY]: defVal,
-    }))[KEY]
-
+    // defVal: Default value of the key to set, when key has not been set
+    const value = (await browser.storage.local.get(KEY))[KEY]
+    if (value === undefined) return await setLocalStorage(KEY, defVal)
     return value
 }
 
 export const setLocalStorage = async (KEY, value) => {
-    return await browser.storage.local.set({
+    await browser.storage.local.set({
         [KEY]: value,
     })
+    return value
 }

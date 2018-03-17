@@ -65,10 +65,10 @@
 
 .above {
     width: 600px;
-    font-size: 75%;
+    font-size: 90%;
 
     & .resultsText {
-        width: 69%;
+        width: 71%;
     }
 
     & .settingsButton {
@@ -78,7 +78,7 @@
 
 .side {
     width: 454px;
-    font-size: 85%;
+    font-size: 89%;
 
     & .resultsText {
         width: 100%;
