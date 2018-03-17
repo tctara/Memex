@@ -3,7 +3,8 @@ export const appendCss = filename => {
     link.type = 'text/css'
     link.rel = 'stylesheet'
     link.href = filename
-    document.body.prepend(link)
+    const d = document.body || document.head || document.documentElement
+    d.prepend(link)
 }
 
 // Generalized functions to get and store
