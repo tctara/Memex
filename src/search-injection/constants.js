@@ -18,7 +18,7 @@ export const SEARCH_ENGINES = {
     google: {
         regex: /(http[s]?:\/\/)?(www.)?google[.\w]+\/search\?.*/,
         container: {
-            above: 'center_col',
+            above: 'res',
             side: 'rhs_block',
         },
     },
