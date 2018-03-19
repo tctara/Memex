@@ -1,7 +1,6 @@
 import {
     IMPORT_TYPE as TYPE,
     OLD_EXT_KEYS,
-    STORAGE_KEYS,
 } from 'src/options/imports/constants'
 import { NUM_IMPORT_ITEMS as ONBOARDING_LIM } from 'src/overview/onboarding/constants'
 import ItemCreator from './import-item-creation'
@@ -53,16 +52,6 @@ export class ImportStateManager {
      */
     constructor(cacheBackend = new ImportCache()) {
         this._cache = cacheBackend
-
-        this._rehydrate()
-    }
-
-    async _rehydrate() {
-        const storage = await browser.storage.local.get({
-            [STORAGE_KEYS.ALLOW_TYPES]: ImportStateManager.DEF_ALLOW_TYPES,
-        })
-
-        this.allowTypes = storage[STORAGE_KEYS.ALLOW_TYPES]
     }
 
     /**
