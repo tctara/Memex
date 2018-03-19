@@ -2,20 +2,31 @@
     --memex-green: #4abf9d;
 }
 
+.above {
+    & .settingsButton {
+        right: -10px;
+    }
+
+    & .resultsText {
+        padding-left: 16px;
+    }
+}
+
+.side {
+    width: 454px;
+
+    & .settingsButton {
+        right: -5px;
+        top: 14px;
+    }
+}
+
 .MEMEX_CONTAINER {
     /* Base size of the children elements */
     margin-bottom: 30px;
     position: relative;
-    animation: fadeIn 0.5s ease-in;
+    animation: fadeIn 0.8s ease-in;
     margin-top: -20px;
-}
-
-.resultsText {
-    display: inline-block;
-    margin-bottom: 3px;
-    font-size: 1em;
-    font-weight: 100;
-    width: 71%;
 }
 
 .resultLength {
@@ -67,21 +78,12 @@
     background-size: 20px;
 }
 
-.above {
-    width: 600px;
-
-    & .settingsButton {
-        right: -10px;
-    }
-}
-
-.side {
-    width: 454px;
-
-    & .settingsButton {
-        right: -5px;
-        top: 12px;
-    }
+.resultsText {
+    display: inline-block;
+    margin-bottom: 3px;
+    font-size: 1.1em;
+    font-weight: 100;
+    width: 71%;
 }
 
 @keyframes fadeIn {
