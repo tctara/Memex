@@ -8,7 +8,7 @@ const termSeparator = new RegExp(DEFAULT_TERM_SEPARATOR.source, 'gu')
 const allWhitespacesPattern = /\s+/g
 const nonWordsPattern = /[\u2000-\u206F\u2E00-\u2E7F\\!"#$%&()*+,./:;<=>?@[\]^_`{|}~«»。（）ㅇ©ºø°]/gi
 const apostrophePattern = /['’]/g
-const dashPattern = /[-]/g
+const dashPattern = /(\S+)-(\S+)/g
 const longWords = /\b\w{30,}\b/gi
 const randomDigits = /\b(\d{1,3}|\d{5,})\b/gi
 const urlPattern = urlRegex()
@@ -38,7 +38,23 @@ const removeUselessWords = (text = '', lang) => {
 
 const combinePunctuation = (text = '') => text.replace(apostrophePattern, '')
 
-const splitPunctuation = (text = '') => text.replace(dashPattern, ' ')
+// Extract individual words from any words-connected-by-dashes
+const splitDashes = (text = '') => {
+    const matches = text.match(dashPattern)
+
+    if (matches == null) {
+        return text
+    }
+
+    return (
+        text +
+        ' ' +
+        matches
+            .map(match => match.split('-')) // Split up dash-words
+            .reduce((a, b) => [...a, ...b]) // Flatten split word
+            .join(' ')
+    )
+}
 
 const removeDiacritics = (text = '') => {
     return rmDiacritics(text)
@@ -72,9 +88,9 @@ export default function transform({ text = '', lang = 'en' }) {
     // Example O'Grady => OGrady
     searchableText = combinePunctuation(searchableText)
 
-    // Splits words with - into two separate words
-    // Example "chevron-right", "chevron right"
-    searchableText = splitPunctuation(searchableText)
+    // Splits words with - into separate words
+    // Example "chevron-right": "chevron right chevron-right"
+    searchableText = splitDashes(searchableText)
 
     // Changes accented characters to regular letters
     searchableText = removeDiacritics(searchableText)

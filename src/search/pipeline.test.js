@@ -79,6 +79,15 @@ const runSuite = useOld => () => {
         })
     })
 
+    // https://xkcd.com/37
+    test('extract terms from a document _including_ words found in "dash-words"', () => {
+        testExtractTerms({
+            input:
+                'very often the people forget to optimize important-ass code, important-ass-code, and important ass-code',
+            output: [...DATA.EXPECTED_TERMS, 'ass'],
+        })
+    })
+
     test('extract terms from a document removing useless whitespace', () => {
         testExtractTerms({
             input: 'very often the people forget to optimize important code',
