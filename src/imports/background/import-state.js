@@ -146,7 +146,7 @@ export class ImportStateManager {
 
         // Create new ImportItemCreator to create import items from which we derive counts
         const creator = new ItemCreator(itemLimits)
-        await creator.dataSourcesReady
+        await creator.existingDataReady
 
         await this._calcCompletedCounts(creator)
         await this._calcRemainingCounts(creator)

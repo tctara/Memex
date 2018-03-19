@@ -1,4 +1,3 @@
-import moment from 'moment'
 import chunk from 'lodash/fp/chunk'
 
 import normalizeUrl from 'src/util/encode-url-for-id'
@@ -6,9 +5,9 @@ import { grabExistingKeys } from 'src/search'
 import { blacklist } from 'src/blacklist/background'
 import { isLoggable } from 'src/activity-logger'
 import { IMPORT_TYPE, OLD_EXT_KEYS } from 'src/options/imports/constants'
+import DataSources from './data-sources'
 
 const chunkSize = 200
-const lookbackWeeks = 12 // Browser history is limited to the last 3 months
 
 // Binds old ext bookmark urls to a function that transforms old ext data to an import item
 const transformOldExtDataToImportItem = bookmarkUrls => (item, index) => ({
@@ -30,11 +29,16 @@ export default class ImportItemCreator {
      * @param {number} [histLimit=Infinity] Limit of history items to create.
      * @param {number} [bmLimit=Infinity] Limit of bookmark items to create.
      */
-    constructor({ histLimit = Infinity, bmLimit = Infinity }) {
+    constructor(
+        { histLimit = Infinity, bmLimit = Infinity },
+        sources = new DataSources(),
+    ) {
         this._histLimit = histLimit
         this._bmLimit = bmLimit
 
-        this.dataSourcesReady = new Promise((resolve, reject) =>
+        this._dataSources = sources
+
+        this.existingDataReady = new Promise((resolve, reject) =>
             this._initExistingChecks()
                 .then(resolve)
                 .catch(reject),
@@ -86,20 +90,6 @@ export default class ImportItemCreator {
 
         return importItems
     }
-
-    /**
-     * @param {number} startTime The time to start search from for browser history.
-     * @param {number} [endTime=Date.now()] The time to end search from for browser history.
-     * @param {number} [limit=999999] The limit to number of items to return
-     * @returns {Array<browser.history.HistoryItem>} All history items in browser.
-     */
-    _fetchHistItems = ({ startTime, endTime = Date.now(), limit = 999999 }) =>
-        browser.history.search({
-            text: '',
-            maxResults: limit,
-            startTime,
-            endTime,
-        })
 
     async _getOldExtItems() {
         let bookmarkUrls = new Set()
@@ -153,89 +143,18 @@ export default class ImportItemCreator {
     }
 
     /**
-     * Recursively traverses BFS-like from the specified node in the BookmarkTree,
-     * yielding the transformed bookmark ImportItems at each dir level.
-     *
-     * @generator
-     * @param {browser.BookmarkTreeNode} dirNode BM node representing a bookmark directory.
-     * @param {(items: browser.BookmarkTreeNode[]) => Map<string, ImportItem>} filter
-     * @yields {Map<string, ImportItem>} Bookmark items in current level.
-     */
-    async *_traverseBmTreeDir(dirNode, filter, itemCount = 0) {
-        // Folders don't contain `url`; recurse!
-        const children = await browser.bookmarks.getChildren(dirNode.id)
-
-        // Split into folders and bookmarks
-        const childGroups = children.reduce(
-            (prev, childNode) => {
-                const stateKey = !childNode.url ? 'dirs' : 'bms'
-
-                return {
-                    ...prev,
-                    [stateKey]: [...prev[stateKey], childNode],
-                }
-            },
-            { dirs: [], bms: [] },
-        )
-
-        // Filter and yield the current level of bookmarks
-        const itemsMap = filter(childGroups.bms)
-        const accCount = itemCount + itemsMap.size
-
-        if (accCount >= this._bmLimit) {
-            return yield ImportItemCreator._limitMap(itemsMap, this._bmLimit)
-        }
-
-        yield itemsMap
-
-        // Recursively process next levels (not expected to get deep)
-        for (const dir of childGroups.dirs) {
-            yield* await this._traverseBmTreeDir(dir, filter, accCount)
-        }
-    }
-
-    /**
-     * @generator
-     * @param {string} rootId The ID of the BookmarkTreeNode to start searching from.
-     * @yields {Map<string, ImportItem>} All bookmark items in browser, indexed by encoded URL.
-     */
-    async *_traverseBmTree(rootId) {
-        const filterByUrl = this._filterItemsByUrl(
-            transformBrowserToImportItem(IMPORT_TYPE.BOOKMARK),
-            url => this.bmKeys.has(url),
-        )
-
-        // Start off tree traversal from root
-        yield* await this._traverseBmTreeDir({ id: rootId }, filterByUrl)
-    }
-
-    /**
      * @generator
      * Handles fetching and filtering the history URLs in time period batches,
      * yielding those batches.
      */
-    async *_createHistItems(limit = 99999) {
+    async *_createHistItems() {
         const filterByUrl = this._filterItemsByUrl(
             transformBrowserToImportItem(IMPORT_TYPE.HISTORY),
             url => this.histKeys.has(url),
         )
-        // Get all history from browser (last 3 months), filter on existing DB pages
-        const baseTime = moment().subtract(lookbackWeeks, 'weeks')
         let itemCount = 0
 
-        // Fetch and filter history in week batches to limit space
-        for (
-            let time = moment();
-            time.isAfter(baseTime);
-            time.subtract(1, 'week')
-        ) {
-            const historyItemBatch = await this._fetchHistItems({
-                startTime: moment(time)
-                    .subtract(1, 'week')
-                    .valueOf(),
-                endTime: time.valueOf(),
-            })
-
+        for await (const historyItemBatch of this._dataSources.history()) {
             const prevCount = itemCount
             const itemsMap = filterByUrl(historyItemBatch)
 
@@ -247,12 +166,17 @@ export default class ImportItemCreator {
             itemCount += itemsMap.size
 
             if (itemCount >= this._histLimit) {
-                const data = ImportItemCreator._limitMap(
-                    itemsMap,
-                    this._histLimit - prevCount,
-                )
-                yield { data, type: IMPORT_TYPE.HISTORY }
-                break
+                return yield {
+                    data: ImportItemCreator._limitMap(
+                        itemsMap,
+                        this._histLimit - prevCount,
+                    ),
+                    type: IMPORT_TYPE.HISTORY,
+                }
+            }
+
+            if (!itemsMap.size) {
+                continue
             }
 
             yield { data: itemsMap, type: IMPORT_TYPE.HISTORY }
@@ -265,14 +189,34 @@ export default class ImportItemCreator {
         const rootId =
             typeof browser.runtime.getBrowserInfo === 'undefined' ? '0' : ''
 
-        // Get all bookmarks from browser, filter on existing DB bookmarks
-        for await (const bmsChunk of this._traverseBmTree(rootId)) {
-            // Not all levels in the bookmark tree need to have bookmark items
-            if (!bmsChunk.size) {
+        const filterByUrl = this._filterItemsByUrl(
+            transformBrowserToImportItem(IMPORT_TYPE.BOOKMARK),
+            url => this.bmKeys.has(url),
+        )
+        let itemCount = 0
+
+        for await (const bmItemBatch of this._dataSources.bookmarks({
+            id: rootId,
+        })) {
+            const prevCount = itemCount
+            const itemsMap = filterByUrl(bmItemBatch)
+            itemCount += itemsMap.size
+
+            if (itemCount >= this._bmLimit) {
+                return yield {
+                    data: ImportItemCreator._limitMap(
+                        itemsMap,
+                        this._bmLimit - prevCount,
+                    ),
+                    type: IMPORT_TYPE.BOOKMARK,
+                }
+            }
+
+            if (!itemsMap.size) {
                 continue
             }
 
-            yield { type: IMPORT_TYPE.BOOKMARK, data: bmsChunk }
+            yield { data: itemsMap, type: IMPORT_TYPE.BOOKMARK }
         }
     }
 
@@ -295,6 +239,7 @@ export default class ImportItemCreator {
         }
 
         if (this._histLimit > 0) {
+            // Yield history items in chunks
             yield* this._createHistItems()
         }
     }
