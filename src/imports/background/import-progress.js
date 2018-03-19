@@ -122,7 +122,7 @@ class ImportProgressManager {
         this.stopped = false
 
         // Iterate through data chunks from the state manager
-        for await (const { chunk, chunkKey } of stateManager.getItems(
+        for await (const { chunk, chunkKey } of stateManager.fetchItems(
             this.processErrors,
         )) {
             const importItemEntries = Object.entries(chunk)

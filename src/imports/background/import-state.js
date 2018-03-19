@@ -1,13 +1,11 @@
-import keys from 'lodash/fp/keys'
-
 import {
     IMPORT_TYPE as TYPE,
     OLD_EXT_KEYS,
     STORAGE_KEYS,
 } from 'src/options/imports/constants'
 import { NUM_IMPORT_ITEMS as ONBOARDING_LIM } from 'src/overview/onboarding/constants'
-import { mapToObject } from 'src/util/map-set-helpers'
 import ItemCreator from './import-item-creation'
+import ImportCache from './cache'
 
 /**
  * Object with keys for each import item type and corresponding unsigned int values,
@@ -27,26 +25,7 @@ import ItemCreator from './import-item-creation'
 
 export class ImportStateManager {
     static QUICK_MODE_ITEM_LIMITS = { histLimit: ONBOARDING_LIM, bmLimit: 0 }
-    static ESTS_STORAGE_KEY = 'import-estimate-counts'
-    static DAY_IN_MS = 1000 * 60 * 60 * 24
-    static STATE_STORAGE_KEY = 'import-items-state'
-    static ERR_STATE_STORAGE_KEY = 'import-err-items-state'
-    static STORAGE_PREFIX = 'import-items-'
-    static ERR_STORAGE_PREFIX = 'err-import-items-'
-    static DEF_CHUNK_SIZE = 100
-    static getInitEsts = () => ({
-        calculatedAt: 0,
-        completed: {
-            [TYPE.BOOKMARK]: 0,
-            [TYPE.HISTORY]: 0,
-            [TYPE.OLD]: 0,
-        },
-        remaining: {
-            [TYPE.BOOKMARK]: 0,
-            [TYPE.HISTORY]: 0,
-            [TYPE.OLD]: 0,
-        },
-    })
+
     static DEF_ALLOW_TYPES = {
         [TYPE.HISTORY]: true,
         [TYPE.BOOKMARK]: true,
@@ -70,38 +49,20 @@ export class ImportStateManager {
     remaining
 
     /**
-     * @type {number} MS since epoch representing time since last ests calculation.
+     * @param {ImportCache} [cacheBackend] Affords state persistence.
      */
-    calculatedAt
+    constructor(cacheBackend = new ImportCache()) {
+        this._cache = cacheBackend
 
-    /**
-     * @type {string[]} Stack of different storage keys used for storing import items state.
-     */
-    storageKeyStack
+        this._rehydrate()
+    }
 
-    /**
-     * @type {string[]} Stack of different storage keys used for storing error'd import items state.
-     */
-    errStorageKeyStack
+    async _rehydrate() {
+        const storage = await browser.storage.local.get({
+            [STORAGE_KEYS.ALLOW_TYPES]: ImportStateManager.DEF_ALLOW_TYPES,
+        })
 
-    /**
-     * @type {number}
-     */
-    chunkSize
-
-    /**
-     * @type {number} Index of the current error chunk
-     */
-    currErrChunk = 0
-
-    /**
-     * @param {number} [chunkSize] Unsigned int to represent size of chunks to return from each `getItems` iteration.
-     */
-    constructor(initChunkSize = ImportStateManager.DEF_CHUNK_SIZE) {
-        this.chunkSize = initChunkSize
-
-        // Attempt rehydrate  of imports state from local storage
-        this._rehydrateState()
+        this.allowTypes = storage[STORAGE_KEYS.ALLOW_TYPES]
     }
 
     /**
@@ -121,66 +82,6 @@ export class ImportStateManager {
         this.completed = completed
         this.remaining = remaining
     }
-
-    /**
-     * @returns {boolean} Denotes whether or not current est counts should be recalculated.
-     */
-    get _shouldRecalcEsts() {
-        return this.calculatedAt < Date.now() - ImportStateManager.DAY_IN_MS
-    }
-
-    /**
-     * Attempt to rehydrate and init key stacks + est counts states from local storage.
-     */
-    async _rehydrateState() {
-        let initState, initErrState, initEstsState, initCalcdAt, initAllowTypes
-        try {
-            const {
-                [STORAGE_KEYS.ALLOW_TYPES]: allowTypes,
-                [ImportStateManager.ERR_STATE_STORAGE_KEY]: savedErrState,
-                [ImportStateManager.STATE_STORAGE_KEY]: savedState,
-                [ImportStateManager.ESTS_STORAGE_KEY]: {
-                    calculatedAt,
-                    ...savedEsts
-                },
-            } = await browser.storage.local.get({
-                [STORAGE_KEYS.ALLOW_TYPES]: ImportStateManager.DEF_ALLOW_TYPES,
-                [ImportStateManager.ERR_STATE_STORAGE_KEY]: [],
-                [ImportStateManager.STATE_STORAGE_KEY]: [],
-                [ImportStateManager.ESTS_STORAGE_KEY]: ImportStateManager.getInitEsts(),
-            })
-            initAllowTypes = allowTypes
-            initState = savedState
-            initErrState = savedErrState
-            initEstsState = savedEsts
-            initCalcdAt = calculatedAt
-        } catch (error) {
-            initAllowTypes = ImportStateManager.DEF_ALLOW_TYPES
-            initState = []
-            initErrState = []
-            initEstsState = ImportStateManager.getInitEsts()
-            initCalcdAt = 0
-        } finally {
-            this.allowTypes = initAllowTypes
-            this.storageKeyStack = initState
-            this.errStorageKeyStack = initErrState
-            this.currErrChunk = this.errStorageKeyStack.length - 1
-            this.counts = initEstsState
-            this.calculatedAt = initCalcdAt
-        }
-    }
-
-    /**
-     * Sets persisted ests state to current local state.
-    */
-    _persistEsts = (customState = {}) =>
-        browser.storage.local.set({
-            [ImportStateManager.ESTS_STORAGE_KEY]: {
-                ...this.counts,
-                calculatedAt: this.calculatedAt,
-            },
-            ...customState,
-        })
 
     /**
      * @param {ImportItem} importItem
@@ -235,7 +136,7 @@ export class ImportStateManager {
             }
 
             // Cache current processed chunk for checking against future chunks (count state change happens in here)
-            const numAdded = await this.addItems(data, type)
+            const numAdded = await this._cache.persistItems(data, type)
             this.remaining[type] += numAdded // Inc count state
         }
     }
@@ -246,9 +147,7 @@ export class ImportStateManager {
      * @param {boolean} quick Denotes whether or not to instantiate an ItemCreator instance with limited creation use.
      */
     async _calcCounts(quick) {
-        // Reset current state first
-        this.calculatedAt = quick ? 0 : Date.now()
-        this.counts = ImportStateManager.getInitEsts()
+        this.counts = ImportCache.INIT_ESTS
         await this.clearItems()
 
         // Quick mode limits just to a small section of recent history
@@ -265,123 +164,11 @@ export class ImportStateManager {
     }
 
     /**
-     * @param {string} key Key to attempt to find in error state.
-     * @returns {Promise<boolean>} Resolves to flag denoting existence of `key`.
-     */
-    async _checkErrExists(key) {
-        for await (const { chunk } of this.getErrItems()) {
-            const chunkKeysSet = new Set(keys(chunk))
-
-            if (chunkKeysSet.has(key)) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    /**
-     * @param {Map<T,U>} inputMap Map to diff against current items state.
-     * @returns {Map<T,U>} Subset (submap?) of `inputMap` containing no entries deemed to already exist in state.
-     */
-    async _diffAgainstState(inputMap) {
-        let entries = [...inputMap]
-
-        for await (const { chunk } of this.getItems()) {
-            const currChunkKeys = new Set(keys(chunk))
-            entries = entries.filter(([key]) => !currChunkKeys.has(key))
-        }
-
-        return new Map(entries)
-    }
-
-    _getNextChunkKey = () =>
-        `${ImportStateManager.STORAGE_PREFIX}${this.storageKeyStack.length}`
-    _getNextErrChunkKey = () =>
-        `${ImportStateManager.ERR_STORAGE_PREFIX}${this.errStorageKeyStack
-            .length}`
-
-    /**
-     * Splits up a Map into an Array of objects of specified size to use as state chunks.
-     *
-     * @param {Map<string|number, any>} map Map of key value pairs.
-     * @returns {any[]} Array of objects of size `this.chunkSize`, created from input Map.
-     */
-    _splitChunks(map) {
-        const pairs = [...map]
-        const chunks = []
-
-        for (let i = 0; i < pairs.length; i += this.chunkSize) {
-            const pairsMap = new Map(pairs.slice(i, i + this.chunkSize))
-            chunks.push(mapToObject(pairsMap))
-        }
-
-        return chunks
-    }
-
-    /**
-     * @param {any} chunk Chunk of total state to store.
-     */
-    async _addChunk(chunk) {
-        const chunkKey = this._getNextChunkKey()
-
-        // Track new storage key in local key state
-        this.storageKeyStack.push(chunkKey)
-
-        const {
-            [ImportStateManager.STATE_STORAGE_KEY]: oldKeyState,
-        } = await browser.storage.local.get({
-            [ImportStateManager.STATE_STORAGE_KEY]: [],
-        })
-
-        // Store new chunk + update persisted import chunk keys state
-        await browser.storage.local.set({
-            [chunkKey]: chunk,
-            [ImportStateManager.STATE_STORAGE_KEY]: [...oldKeyState, chunkKey],
-        })
-    }
-
-    async *_getChunk(chunkKey) {
-        const storage = await browser.storage.local.get(chunkKey)
-        yield { chunk: storage[chunkKey], chunkKey }
-    }
-
-    /**
-     * @param {Map<string, ImportItem>} itemsMap Array of import items to add to state.
-     * @param {IMPORT_TYPE} type
-     * @returns {number} The amount of items added to state, post-filtering.
-     */
-    async addItems(itemsMap, type) {
-        // Ensure no dupes get added
-        const filteredData = await this._diffAgainstState(itemsMap)
-
-        if (!filteredData.size) {
-            return 0 // Die early if nothing needed
-        }
-
-        // Split into specific-size chunks (if enough input)
-        for (const itemsChunk of this._splitChunks(filteredData)) {
-            await this._addChunk(itemsChunk)
-        }
-
-        return filteredData.size
-    }
-
-    /**
-     * @param {Map<string, ImportItem>} itemsMap Array of import items to set as state.
-     */
-    async setItems(itemsMap) {
-        await this.clearItems()
-        await this.addItems(itemsMap)
-    }
-
-    /**
      * Forces the persisted estimates state to be "dirtied", meaning next `fetchEsts` attempt will
      * require a complete recalc rather than using the persisted state/cache.
      */
-    async dirtyEsts() {
-        this.calculatedAt = 0
-        return await this._persistEsts()
+    dirtyEsts() {
+        this._cache.expired = true
     }
 
     /**
@@ -392,11 +179,13 @@ export class ImportStateManager {
      * @return {EstimateCounts}
      */
     async fetchEsts(quick = false) {
-        // If saved calcs are old, or forced to, recalc
-        if (this._shouldRecalcEsts) {
+        if (this._cache.expired) {
             // Perform calcs to update state
             await this._calcCounts(quick)
-            await this._persistEsts()
+            await this._cache.persistEsts(this.counts)
+
+            // Expire cache immediately if quick mode (next read attempt will recalc)
+            if (quick) this._cache.expired = true
         }
 
         return this.counts
@@ -408,20 +197,8 @@ export class ImportStateManager {
      * @yields {any} Object containing `chunkKey` and `chunk` pair, corresponding to the chunk storage key
      *  and value at that storage key, respectively.
      */
-    async *getItems(includeErrs = false) {
-        for (const chunkKey of this.storageKeyStack) {
-            yield* this._getChunk(chunkKey)
-        }
-
-        if (includeErrs) {
-            yield* this.getErrItems()
-        }
-    }
-
-    async *getErrItems() {
-        for (const chunkKey of this.errStorageKeyStack) {
-            yield* this._getChunk(chunkKey)
-        }
+    async *fetchItems(includeErrs = false) {
+        yield* this._cache.getItems(includeErrs)
     }
 
     /**
@@ -432,21 +209,14 @@ export class ImportStateManager {
      * @returns {ImportItem} The removed import item.
      */
     async removeItem(chunkKey, itemKey, isError = false) {
-        const { [chunkKey]: chunk } = await browser.storage.local.get({
-            [chunkKey]: {},
-        })
-
-        // Destructure existing state, removing the unwanted item, then update storage with remaining state
-        const { [itemKey]: itemToRemove, ...remainingChunk } = chunk
+        const item = await this._cache.removeItem(chunkKey, itemKey)
 
         // Decrement remaining items count
-        if (itemToRemove != null) {
-            this._markOffItem(itemToRemove, isError)
-
-            await this._persistEsts({ [chunkKey]: remainingChunk })
+        if (item != null) {
+            this._markOffItem(item, isError)
         }
 
-        return itemToRemove
+        return item
     }
 
     /**
@@ -457,55 +227,10 @@ export class ImportStateManager {
      */
     async flagItemAsError(chunkKey, itemKey) {
         const item = await this.removeItem(chunkKey, itemKey, true)
-
-        // Don't re-add if error already exists
-        if (await this._checkErrExists(itemKey)) {
-            return
-        }
-
-        let errChunkKey
-        if (!this.errStorageKeyStack.length) {
-            errChunkKey = ImportStateManager.ERR_STORAGE_PREFIX + '0'
-            this.errStorageKeyStack.push(errChunkKey)
-        } else {
-            errChunkKey = this.errStorageKeyStack[
-                this.errStorageKeyStack.length - 1
-            ]
-        }
-
-        let { [errChunkKey]: existingChunk } = await browser.storage.local.get({
-            [errChunkKey]: {},
-        })
-
-        // If curr error chunk is full, move on to the next one
-        if (Object.keys(existingChunk).length >= this.chunkSize) {
-            existingChunk = {}
-            errChunkKey = this._getNextErrChunkKey()
-            this.errStorageKeyStack.push(errChunkKey)
-        }
-
-        // Add current item to error chunk
-        existingChunk[itemKey] = item
-
-        return await browser.storage.local.set({
-            [errChunkKey]: existingChunk,
-            [ImportStateManager.ERR_STATE_STORAGE_KEY]: this.errStorageKeyStack,
-        })
+        await this._cache.flagItemAsError(itemKey, item)
     }
 
-    /**
-     * Clears local non-persisted items states. Error items + import ests are not removed.
-     */
-    async clearItems() {
-        // Remove persisted states from storage
-        await browser.storage.local.remove([
-            ...this.storageKeyStack,
-            ImportStateManager.STATE_STORAGE_KEY,
-        ])
-
-        // Reset local state
-        this.storageKeyStack = []
-    }
+    clearItems = () => this._cache.clear()
 }
 
 const instance = new ImportStateManager()

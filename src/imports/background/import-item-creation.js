@@ -6,7 +6,6 @@ import { grabExistingKeys } from 'src/search'
 import { blacklist } from 'src/blacklist/background'
 import { isLoggable } from 'src/activity-logger'
 import { IMPORT_TYPE, OLD_EXT_KEYS } from 'src/options/imports/constants'
-import stateManager from './import-state'
 
 const chunkSize = 200
 const lookbackWeeks = 12 // Browser history is limited to the last 3 months
@@ -25,20 +24,6 @@ const transformBrowserToImportItem = type => item => ({
     url: item.url,
     type,
 })
-
-/**
- * @returns {({ url: string }) => boolean} A function affording checking of a URL against the
- *  URLs of previously error'd import items.
- */
-async function initErrordItemsCheck() {
-    const errordUrls = new Set()
-
-    for await (const { chunk } of stateManager.getErrItems()) {
-        Object.values(chunk).forEach(item => errordUrls.add(item.url))
-    }
-
-    return ({ url }) => errordUrls.has(url)
-}
 
 export default class ImportItemCreator {
     /**
@@ -60,7 +45,6 @@ export default class ImportItemCreator {
 
     async _initExistingChecks() {
         this.isBlacklisted = await blacklist.checkWithBlacklist()
-        this.isPrevErrord = await initErrordItemsCheck()
 
         // Grab existing data keys from DB
         const keySets = await grabExistingKeys()
@@ -84,11 +68,7 @@ export default class ImportItemCreator {
 
         for (let i = 0; i < items.length; i++) {
             // Exclude item if any of the standard checks fail
-            if (
-                !isLoggable(items[i]) ||
-                this.isBlacklisted(items[i]) ||
-                this.isPrevErrord(items[i])
-            ) {
+            if (!isLoggable(items[i]) || this.isBlacklisted(items[i])) {
                 continue
             }
 
