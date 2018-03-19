@@ -25,7 +25,7 @@
     /* Base size of the children elements */
     margin-bottom: 30px;
     position: relative;
-    animation: fadeIn 0.8s ease-in;
+    animation: fadeIn 0.5s ease-in;
     margin-top: -20px;
 }
 
