@@ -41,7 +41,7 @@ const runSuite = useOld => () => {
     test('extract terms from a document removing URLs', () => {
         testExtractTerms({
             input:
-                'very often the people (https://the-people.com) forget to optimize important code',
+                'very often the people (https://thepeople.com) forget to optimize important code',
         })
     })
 
@@ -52,15 +52,9 @@ const runSuite = useOld => () => {
         })
     })
 
-    test('extract terms from a document splitting punctuation', () => {
-        testExtractTerms({
-            input: 'very often the-people forget to optimize important code',
-        })
-    })
-
     test('extract terms from a document removing diacritics', () => {
         testExtractTerms({
-            input: 'very often the-péople forget to óptimize important code',
+            input: 'very often the péople forget to óptimize important code',
         })
     })
 
@@ -74,7 +68,7 @@ const runSuite = useOld => () => {
     test('extract terms from a document _including_ words with numbers', () => {
         testExtractTerms({
             input:
-                'very often the-people (like Punkdude123) forget to optimize important code',
+                'very often the people (like Punkdude123) forget to optimize important code',
             output: [...DATA.EXPECTED_TERMS, 'punkdude123'],
         })
     })
@@ -92,7 +86,13 @@ const runSuite = useOld => () => {
         testExtractTerms({
             input:
                 'very often the people forget to optimize important-ass code, important-ass-code, and important ass-code',
-            output: [...DATA.EXPECTED_TERMS, 'ass'],
+            output: [
+                ...DATA.EXPECTED_TERMS,
+                'important-ass-code',
+                'important-ass',
+                'ass-code',
+                'ass',
+            ],
         })
     })
 
