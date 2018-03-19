@@ -6,7 +6,7 @@ import { DEFAULT_TERM_SEPARATOR } from 'src/search/util'
 
 const termSeparator = new RegExp(DEFAULT_TERM_SEPARATOR.source, 'gu')
 const allWhitespacesPattern = /\s+/g
-const nonWordsPattern = /[\u2000-\u206F\u2E00-\u2E7F\\!"#$%&()*+,./:;<=>?@[\]^_`{|}~«»。（）ㅇ©ºø°]/gi
+const nonWordsPattern = /[\u2000-\u206F\u2E00-\u2E7F\\!"#$%&()*+,./:;<=>?[\]^_`{|}~«»。（）ㅇ©ºø°]/gi
 const apostrophePattern = /['’]/g
 const dashPattern = /(\S+)-(\S+)/g
 const longWords = /\b\w{30,}\b/gi

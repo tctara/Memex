@@ -79,6 +79,14 @@ const runSuite = useOld => () => {
         })
     })
 
+    test('extract terms from a document _including_ emails', () => {
+        testExtractTerms({
+            input:
+                'very often the people (punkdude123@gmail.com) forget to optimize important code',
+            output: [...DATA.EXPECTED_TERMS, 'punkdude123@gmail'],
+        })
+    })
+
     // https://xkcd.com/37
     test('extract terms from a document _including_ words found in "dash-words"', () => {
         testExtractTerms({
