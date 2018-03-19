@@ -115,10 +115,19 @@ class ImportProgressManager {
         }
     }
 
+    async init(allowTypes, quickMode) {
+        stateManager.allowTypes = allowTypes
+
+        if (!await this.getImportInProgressFlag()) {
+            await stateManager.fetchEsts(quickMode)
+        }
+    }
+
     /**
      * Start execution
      */
     async start() {
+        this.setImportInProgressFlag(true)
         this.stopped = false
 
         // Iterate through data chunks from the state manager
@@ -172,13 +181,11 @@ class ImportProgressManager {
     }
 
     async getImportInProgressFlag() {
-        const {
-            [ImportProgressManager.IMPORTS_PROGRESS_KEY]: flag,
-        } = await browser.storage.local.get({
+        const storage = await browser.storage.local.get({
             [ImportProgressManager.IMPORTS_PROGRESS_KEY]: false,
         })
 
-        return flag
+        return storage[ImportProgressManager.IMPORTS_PROGRESS_KEY]
     }
 
     async setImportInProgressFlag(value) {
@@ -186,6 +193,8 @@ class ImportProgressManager {
             [ImportProgressManager.IMPORTS_PROGRESS_KEY]: value,
         })
     }
+
+    fetchEsts = quickMode => stateManager.fetchEsts(quickMode)
 }
 
 export default ImportProgressManager
