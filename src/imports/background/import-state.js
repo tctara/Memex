@@ -1,7 +1,4 @@
-import {
-    IMPORT_TYPE as TYPE,
-    OLD_EXT_KEYS,
-} from 'src/options/imports/constants'
+import { IMPORT_TYPE as TYPE } from 'src/options/imports/constants'
 import { NUM_IMPORT_ITEMS as ONBOARDING_LIM } from 'src/overview/onboarding/constants'
 import ItemCreator from './import-item-creation'
 import ImportCache from './cache'
@@ -28,7 +25,6 @@ export class ImportStateManager {
     static DEF_ALLOW_TYPES = {
         [TYPE.HISTORY]: true,
         [TYPE.BOOKMARK]: true,
-        [TYPE.OLD]: true,
     }
 
     /**
@@ -90,17 +86,12 @@ export class ImportStateManager {
      * @param {ImportItemCreator} creator Ready item creator instance to afford access to existing keys.
      */
     async _calcCompletedCounts(creator) {
-        const {
-            [OLD_EXT_KEYS.NUM_DONE]: numOldExtDone,
-        } = await browser.storage.local.get({ [OLD_EXT_KEYS.NUM_DONE]: 0 })
-
         // Can sometimes return slightly different lengths for unknown reason
         const completedHistory = creator.histKeys.size - creator.bmKeys.size
 
         this.completed = {
             [TYPE.HISTORY]: completedHistory < 0 ? 0 : completedHistory,
             [TYPE.BOOKMARK]: creator.bmKeys.size,
-            [TYPE.OLD]: numOldExtDone,
         }
     }
 

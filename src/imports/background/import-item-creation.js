@@ -1,21 +1,9 @@
-import chunk from 'lodash/fp/chunk'
-
 import normalizeUrl from 'src/util/encode-url-for-id'
 import { grabExistingKeys } from 'src/search'
 import { blacklist } from 'src/blacklist/background'
 import { isLoggable } from 'src/activity-logger'
-import { IMPORT_TYPE, OLD_EXT_KEYS } from 'src/options/imports/constants'
+import { IMPORT_TYPE } from 'src/options/imports/constants'
 import DataSources from './data-sources'
-
-const chunkSize = 200
-
-// Binds old ext bookmark urls to a function that transforms old ext data to an import item
-const transformOldExtDataToImportItem = bookmarkUrls => (item, index) => ({
-    type: IMPORT_TYPE.OLD,
-    url: item.url,
-    hasBookmark: bookmarkUrls.has(item.url),
-    index,
-})
 
 // Binds an import type to a function that transforms a history/bookmark doc to an import item.
 const transformBrowserToImportItem = type => item => ({
@@ -58,7 +46,7 @@ export default class ImportItemCreator {
 
     /**
     *
-    * Performs all needed filtering on a collection of history, bookmark, or old ext items.
+    * Performs all needed filtering on a collection of history or bookmarks
     *
     * @param {(item: any) => any} [transform=noop] Opt. transformformation fn turning current iterm into import item structure.
     * @param {(url: string) => bool} [alreadyExists] Opt. checker function to check against existing data.
@@ -89,57 +77,6 @@ export default class ImportItemCreator {
         }
 
         return importItems
-    }
-
-    async _getOldExtItems() {
-        let bookmarkUrls = new Set()
-        const filterByUrl = this._filterItemsByUrl()
-        const {
-            [OLD_EXT_KEYS.INDEX]: index,
-            [OLD_EXT_KEYS.BOOKMARKS]: bookmarks,
-        } = await browser.storage.local.get({
-            [OLD_EXT_KEYS.INDEX]: { index: [] },
-            [OLD_EXT_KEYS.BOOKMARKS]: '[]',
-        })
-
-        if (typeof bookmarks === 'string') {
-            try {
-                bookmarkUrls = new Set(JSON.parse(bookmarks).map(bm => bm.url))
-            } catch (error) {}
-        }
-
-        const transform = transformOldExtDataToImportItem(bookmarkUrls)
-        const importItems = []
-
-        // Only attempt page data conversion if index + bookmark storage values are correct types
-        if (index && index.index instanceof Array) {
-            // NOTE: There is a bug with old ext index sometimes repeating the index keys, hence uniqing here
-            //  (eg.I indexed 400 pages, index contained 43 million)
-            const indexSet = new Set(index.index)
-
-            // Break up old index into chunks of size 200 to access sequentially from storage
-            // Doing this to allow us to cap space complexity at a constant level +
-            // give time a `N / # chunks` speedup
-            const chunks = chunk(chunkSize)([...indexSet])
-            for (let i = 0; i < chunks.length; i++) {
-                const storageChunk = await browser.storage.local.get(chunks[i])
-
-                for (let j = 0; j < chunks[i].length; j++) {
-                    if (storageChunk[chunks[i][j]] == null) {
-                        continue
-                    }
-
-                    importItems.push(
-                        transform(
-                            storageChunk[chunks[i][j]],
-                            i * chunkSize + j,
-                        ),
-                    )
-                }
-            }
-        }
-
-        return filterByUrl(importItems)
     }
 
     /**
@@ -230,12 +167,6 @@ export default class ImportItemCreator {
     async *createImportItems() {
         if (this._bmLimit > 0) {
             yield* this._createBmItems()
-        }
-
-        // Get all old ext from local storage, don't filter on existing data
-        yield {
-            type: IMPORT_TYPE.OLD,
-            data: await this._getOldExtItems(),
         }
 
         if (this._histLimit > 0) {
