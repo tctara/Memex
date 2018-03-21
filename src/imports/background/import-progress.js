@@ -104,13 +104,16 @@ class ImportProgressManager {
         } finally {
             processor.finished = true
 
-            this.observer.next(msg)
+            // Send item data + outcome status down to UI (and error if present)
+            if (!this.stopped) {
+                this.observer.next(msg)
 
-            // Either flag as error or remove from state depending on processing error status
-            if (msg.error && !this.processErrors) {
-                await stateManager.flagItemAsError(chunkKey, encodedUrl)
-            } else {
-                await stateManager.removeItem(chunkKey, encodedUrl)
+                // Either flag as error or remove from state depending on processing error status
+                if (msg.error && !this.processErrors) {
+                    await stateManager.flagItemAsError(chunkKey, encodedUrl)
+                } else {
+                    await stateManager.removeItem(chunkKey, encodedUrl)
+                }
             }
         }
     }
