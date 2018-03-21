@@ -8,6 +8,15 @@ export default class ImportDataSources {
         maxResults: 999999,
     }
 
+    /**
+     * Bookmarks are stored in a shallow tree, which we traverse recursively. We need a node to start from.
+     *  Chrome and FF seem to ID their bookmark data differently. Root works from '' in FF
+     *  but needs '0' in Chrome. `runtime.getBrowserInfo` is only available on FF web ext API
+     */
+    static ROOT_BM = {
+        id: typeof browser.runtime.getBrowserInfo === 'undefined' ? '0' : '',
+    }
+
     _createHistParams = time => ({
         ...ImportDataSources.DEF_HIST_PARAMS,
         endTime: time,
@@ -16,6 +25,9 @@ export default class ImportDataSources {
             .valueOf(),
     })
 
+    /**
+     * @return {AsyncIterable<BrowserItem[]>} History items in current period.
+     */
     async *history() {
         // Get all history from browser (last 3 months), filter on existing DB pages
         const baseTime = moment().subtract(
@@ -37,12 +49,10 @@ export default class ImportDataSources {
      * Recursively traverses BFS-like from the specified node in the BookmarkTree,
      * yielding the transformed bookmark ImportItems at each dir level.
      *
-     * @generator
-     * @param {browser.BookmarkTreeNode} dirNode BM node representing a bookmark directory.
-     * @param {(items: browser.BookmarkTreeNode[]) => Map<string, ImportItem>} filter
-     * @yields {Map<string, ImportItem>} Bookmark items in current level.
+     * @param {browser.BookmarkTreeNode} [dirNode] BM node representing a bookmark directory.
+     * @return {AsyncIterable<BrowserItem[]>} Bookmark items in current level.
      */
-    async *bookmarks(dirNode) {
+    async *bookmarks(dirNode = ImportDataSources.ROOT_BM) {
         // Folders don't contain `url`; recurse!
         const children = await browser.bookmarks.getChildren(dirNode.id)
 
