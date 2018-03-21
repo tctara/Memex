@@ -52,6 +52,8 @@ export class ImportStateManager {
     ) {
         this._cache = cacheBackend
         this._itemCreator = itemCreator
+
+        this._initFromCache()
     }
 
     /**
@@ -70,6 +72,12 @@ export class ImportStateManager {
     set counts({ completed, remaining }) {
         this.completed = { ...completed }
         this.remaining = { ...remaining }
+    }
+
+    async _initFromCache() {
+        await this._cache.ready
+
+        this.counts = this._cache.counts
     }
 
     /**
@@ -116,7 +124,7 @@ export class ImportStateManager {
             }
 
             // Cache current processed chunk for checking against future chunks (count state change happens in here)
-            const numAdded = await this._cache.persistItems(data, type)
+            const numAdded = await this._cache.persistItems(data)
             this.remaining[type] += numAdded // Inc count state
         }
     }

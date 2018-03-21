@@ -193,7 +193,7 @@ export default class ImportCache {
      * @param {IMPORT_TYPE} type
      * @returns {number} The amount of items added to cache, post-filtering.
      */
-    async persistItems(itemsMap, type) {
+    async persistItems(itemsMap) {
         const filteredData = await this._diffAgainstStored(itemsMap)
 
         if (!filteredData.size) {
