@@ -1,6 +1,6 @@
 import normalizeUrl from 'src/util/encode-url-for-id'
 import { grabExistingKeys } from 'src/search'
-import { blacklist } from 'src/blacklist/background'
+import { checkWithBlacklist } from 'src/blacklist/background/interface'
 import { isLoggable } from 'src/activity-logger'
 import { IMPORT_TYPE as TYPE } from 'src/options/imports/constants'
 import DataSources from './data-sources'
@@ -24,35 +24,60 @@ const deriveImportItem = type => item => ({
  */
 
 export default class ImportItemCreator {
+    static DEF_LIMITS = { histLimit: Infinity, bmLimit: Infinity }
+
     /**
-     * @param {number} [histLimit=Infinity] Limit of history items to create.
-     * @param {number} [bmLimit=Infinity] Limit of bookmark items to create.
+     * @param {Object} [limits]
+     * @param {number} limits.histLimit Limit of history items to create.
+     * @param {number} limits.bmLimit Limit of bookmark items to create.
+     * @param {DataSources} [sources]
      */
     constructor(
-        { histLimit = Infinity, bmLimit = Infinity },
+        limits = ImportItemCreator.DEF_LIMITS,
         sources = new DataSources(),
     ) {
+        this.limits = limits
+        this._dataSources = sources
+        this.initData()
+    }
+
+    set limits({
+        histLimit = ImportItemCreator.DEF_LIMITS.histLimit,
+        bmLimit = ImportItemCreator.DEF_LIMITS.bmLimit,
+    }) {
         this._histLimit = histLimit
         this._bmLimit = bmLimit
+    }
 
-        this._dataSources = sources
+    get completedBmCount() {
+        return this._bmKeys.size
+    }
 
-        this.existingDataReady = new Promise((resolve, reject) =>
-            this._initExistingChecks()
-                .then(resolve)
-                .catch(reject),
-        )
+    get completedHistCount() {
+        return this._histKeys.size - this.completedBmCount
     }
 
     static _limitMap = (items, limit) => new Map([...items].slice(0, limit))
 
-    async _initExistingChecks() {
-        this.isBlacklisted = await blacklist.checkWithBlacklist()
+    /**
+     * Sets up existing data states which are used for filtering out items.
+     */
+    async initData() {
+        this.existingDataReady = new Promise(async (resolve, reject) => {
+            try {
+                this._isBlacklisted = await checkWithBlacklist()
 
-        // Grab existing data keys from DB
-        const keySets = await grabExistingKeys()
-        this.histKeys = keySets.histKeys
-        this.bmKeys = keySets.bmKeys
+                // Grab existing data keys from DB
+                const keySets = await grabExistingKeys()
+                this._histKeys = keySets.histKeys
+                this._bmKeys = keySets.bmKeys
+                resolve()
+            } catch (err) {
+                reject(err)
+            }
+        })
+
+        await this.existingDataReady
     }
 
     /**
@@ -71,7 +96,7 @@ export default class ImportItemCreator {
 
         for (let i = 0; i < items.length; i++) {
             // Exclude item if any of the standard checks fail
-            if (!isLoggable(items[i]) || this.isBlacklisted(items[i])) {
+            if (!isLoggable(items[i]) || this._isBlacklisted(items[i])) {
                 continue
             }
 
@@ -131,7 +156,7 @@ export default class ImportItemCreator {
         if (this._bmLimit > 0) {
             const itemsFilter = this._filterItemsByUrl(
                 deriveImportItem(TYPE.BOOKMARK),
-                url => this.bmKeys.has(url),
+                url => this._bmKeys.has(url),
             )
 
             yield* this._iterateItems(
@@ -145,7 +170,7 @@ export default class ImportItemCreator {
         if (this._histLimit > 0) {
             const itemsFilter = this._filterItemsByUrl(
                 deriveImportItem(TYPE.HISTORY),
-                url => this.histKeys.has(url),
+                url => this._histKeys.has(url),
             )
 
             yield* this._iterateItems(

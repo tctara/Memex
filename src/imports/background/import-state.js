@@ -46,8 +46,12 @@ export class ImportStateManager {
     /**
      * @param {ImportCache} [cacheBackend] Affords state persistence.
      */
-    constructor(cacheBackend = new ImportCache()) {
+    constructor(
+        cacheBackend = new ImportCache(),
+        itemCreator = new ItemCreator(),
+    ) {
         this._cache = cacheBackend
+        this._itemCreator = itemCreator
     }
 
     /**
@@ -55,8 +59,8 @@ export class ImportStateManager {
      */
     get counts() {
         return {
-            completed: this.completed,
-            remaining: this.remaining,
+            completed: { ...this.completed },
+            remaining: { ...this.remaining },
         }
     }
 
@@ -64,8 +68,8 @@ export class ImportStateManager {
      * @param {EstimateCounts} ests
      */
     set counts({ completed, remaining }) {
-        this.completed = completed
-        this.remaining = remaining
+        this.completed = { ...completed }
+        this.remaining = { ...remaining }
     }
 
     /**
@@ -81,30 +85,26 @@ export class ImportStateManager {
     }
 
     /**
-     * Handles calculating the completed estimate counts for history, bookmark, and old-ext imports.
-     *
-     * @param {ImportItemCreator} creator Ready item creator instance to afford access to existing keys.
+     * These counts are available via the item creator instance.
      */
-    async _calcCompletedCounts(creator) {
-        // Can sometimes return slightly different lengths for unknown reason
-        const completedHistory = creator.histKeys.size - creator.bmKeys.size
-
+    async _calcCompletedCounts() {
         this.completed = {
-            [TYPE.HISTORY]: completedHistory < 0 ? 0 : completedHistory,
-            [TYPE.BOOKMARK]: creator.bmKeys.size,
+            [TYPE.HISTORY]: this._itemCreator.completedHistCount,
+            [TYPE.BOOKMARK]: this._itemCreator.completedBmCount,
         }
     }
 
     /**
      * Handles calculating the remaining estimate counts for history, bookmark, and old-ext imports.
-     *
-     * @param {ImportItemCreator} creator Ready item creator instance to afford creating import items from browser data.
      */
-    async _calcRemainingCounts(creator) {
+    async _calcRemainingCounts() {
         let bookmarkIds = new Set()
 
         // Import items creation will yield parts of the total items
-        for await (let { data, type } of creator.createImportItems()) {
+        for await (let {
+            data,
+            type,
+        } of this._itemCreator.createImportItems()) {
             if (type === TYPE.BOOKMARK) {
                 // Bookmarks should always yield before history
                 bookmarkIds = new Set([...bookmarkIds, ...data.keys()])
@@ -123,24 +123,15 @@ export class ImportStateManager {
 
     /**
      * Main count calculation method which will create import items, and set state counts and item chunks.
-     *
-     * @param {boolean} quick Denotes whether or not to instantiate an ItemCreator instance with limited creation use.
      */
-    async _calcCounts(quick) {
-        this.counts = ImportCache.INIT_ESTS
-        await this.clearItems()
-
-        // Quick mode limits just to a small section of recent history
-        const itemLimits = quick
-            ? ImportStateManager.QUICK_MODE_ITEM_LIMITS
-            : {}
+    async _calcCounts() {
+        await this.clearItems() // Reset current counts
 
         // Create new ImportItemCreator to create import items from which we derive counts
-        const creator = new ItemCreator(itemLimits)
-        await creator.existingDataReady
+        await this._itemCreator.initData()
 
-        await this._calcCompletedCounts(creator)
-        await this._calcRemainingCounts(creator)
+        await this._calcCompletedCounts()
+        await this._calcRemainingCounts()
     }
 
     /**
@@ -159,9 +150,13 @@ export class ImportStateManager {
      * @return {EstimateCounts}
      */
     async fetchEsts(quick = false) {
+        this._itemCreator.limits = quick
+            ? ImportStateManager.QUICK_MODE_ITEM_LIMITS
+            : {}
+
         if (this._cache.expired) {
             // Perform calcs to update state
-            await this._calcCounts(quick)
+            await this._calcCounts()
             await this._cache.persistEsts(this.counts)
 
             // Expire cache immediately if quick mode (next read attempt will recalc)
@@ -210,7 +205,10 @@ export class ImportStateManager {
         await this._cache.flagItemAsError(itemKey, item)
     }
 
-    clearItems = () => this._cache.clear()
+    async clearItems() {
+        this.counts = ImportCache.INIT_ESTS
+        await this._cache.clear()
+    }
 }
 
 const instance = new ImportStateManager()
