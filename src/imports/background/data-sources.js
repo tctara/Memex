@@ -3,19 +3,18 @@ import moment from 'moment'
 export default class ImportDataSources {
     static LOOKBACK_WEEKS = 12 // Browser history is limited to the last 3 months
 
-    /**
-     * @param {number} startTime The time to start search from for browser history.
-     * @param {number} [endTime=Date.now()] The time to end search from for browser history.
-     * @param {number} [limit=999999] The limit to number of items to return
-     * @returns {Array<browser.history.HistoryItem>} All history items in browser.
-     */
-    _fetchHistItems = ({ startTime, endTime = Date.now(), limit = 999999 }) =>
-        browser.history.search({
-            text: '',
-            maxResults: limit,
-            startTime,
-            endTime,
-        })
+    static DEF_HIST_PARAMS = {
+        text: '',
+        maxResults: 999999,
+    }
+
+    _createHistParams = time => ({
+        ...ImportDataSources.DEF_HIST_PARAMS,
+        endTime: time,
+        startTime: moment(time)
+            .subtract(1, 'week')
+            .valueOf(),
+    })
 
     async *history() {
         // Get all history from browser (last 3 months), filter on existing DB pages
@@ -30,12 +29,7 @@ export default class ImportDataSources {
             time.isAfter(baseTime);
             time.subtract(1, 'week')
         ) {
-            yield this._fetchHistItems({
-                startTime: moment(time)
-                    .subtract(1, 'week')
-                    .valueOf(),
-                endTime: time.valueOf(),
-            })
+            yield browser.history.search(this._createHistParams(time.valueOf()))
         }
     }
 
