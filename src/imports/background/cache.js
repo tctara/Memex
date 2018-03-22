@@ -56,7 +56,7 @@ export default class ImportCache {
         return { chunk: storage[chunkKey], chunkKey }
     }
 
-    constructor(initChunkSize = ImportCache.DEF_CHUNK_SIZE) {
+    constructor({ initChunkSize = ImportCache.DEF_CHUNK_SIZE }) {
         this.chunkSize = initChunkSize
 
         this.ready = this._rehydrate()

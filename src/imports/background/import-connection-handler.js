@@ -25,7 +25,10 @@ export default class ImportConnectionHandler {
         this._quickMode = quick
 
         // Initialize the `ProgressManager` to run the import processing logic on import items state
-        this.importer = new ProgressManager(DEF_CONCURRENCY, this.itemObserver)
+        this.importer = new ProgressManager({
+            concurrency: DEF_CONCURRENCY,
+            observer: this.itemObserver,
+        })
 
         // Handle any incoming UI messages to control the importer
         port.onMessage.addListener(this.messageListener)

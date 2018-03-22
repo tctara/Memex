@@ -34,9 +34,9 @@ class ImportProgressManager {
      */
     stopped = false
 
-    constructor(initConcurrency, initObserver) {
-        this.concurrency = initConcurrency
-        this.observer = initObserver
+    constructor({ concurrency, observer }) {
+        this.concurrency = concurrency
+        this.observer = observer
     }
 
     set concurrency(value) {
