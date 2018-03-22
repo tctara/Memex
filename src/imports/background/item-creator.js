@@ -36,6 +36,7 @@ const deriveImportItem = type => item => ({
  * @property {DataSources} dataSources
  * @property {() => Promise<any>} existingKeySource Resolves to `histKeys` and `bmKeys` `Set<string>`s containing
  *  all existing history and bookmark keys to compare incoming URLs against.
+ * @property {boolean} testMode Treat some things differently under test conditions.
  */
 
 export default class ImportItemCreator {
@@ -48,10 +49,12 @@ export default class ImportItemCreator {
         limits = ImportItemCreator.DEF_LIMITS,
         dataSources = new DataSources({}),
         existingKeySource = grabExistingKeys,
+        testMode = false,
     }) {
         this.limits = limits
         this._dataSources = dataSources
-        this._existngKeys = existingKeySource
+        this._existingKeys = existingKeySource
+        this._testMode = testMode
 
         this.initData()
     }
@@ -83,7 +86,7 @@ export default class ImportItemCreator {
                 this._isBlacklisted = await checkWithBlacklist()
 
                 // Grab existing data keys from DB
-                const keySets = await this._existngKeys()
+                const keySets = await this._existingKeys()
                 this._histKeys = keySets.histKeys
                 this._bmKeys = keySets.bmKeys
                 resolve()
@@ -117,7 +120,9 @@ export default class ImportItemCreator {
 
             try {
                 // Asssociate the item with the encoded URL in results Map
-                const url = normalizeUrl(items[i].url)
+                const url = normalizeUrl(items[i].url, {
+                    skipQueryRules: this._testMode,
+                })
 
                 if (!alreadyExists(url)) {
                     importItems.set(url, transform(items[i]))
