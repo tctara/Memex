@@ -1,23 +1,44 @@
 import { mapToObject } from 'src/util/map-set-helpers'
 
 export default class Cache {
+    static DAY_IN_MS = 1000 * 60 * 60 * 24
     static INIT_ESTS = {
         calculatedAt: 0,
         completed: { b: 0, h: 0 },
         remaining: { b: 0, h: 0 },
     }
 
-    expired = true
     chunks = []
     errChunks = []
 
-    counts = {
-        completed: { ...Cache.INIT_ESTS.completed },
-        remaining: { ...Cache.INIT_ESTS.remaining },
+    calculatedAt = 0
+
+    constructor({ initEsts = Cache.INIT_ESTS }) {
+        this.counts = {
+            completed: { ...initEsts.completed },
+            remaining: { ...initEsts.remaining },
+        }
     }
 
-    persistItems(data) {
+    get expired() {
+        return this.calculatedAt < Date.now() - Cache.DAY_IN_MS
+    }
+
+    set expired(value) {
+        if (value === true) {
+            this.calculatedAt = 0
+        }
+    }
+
+    async persistItems(data) {
         this.chunks.push(mapToObject(data))
+        return data.size
+    }
+
+    async persistEsts(ests) {
+        this.calculatedAt = Date.now()
+
+        this.counts = { ...ests }
     }
 
     async *getItems(includeErrs = false) {
