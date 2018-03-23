@@ -1,5 +1,5 @@
 import { CMDS, DEF_CONCURRENCY } from 'src/options/imports/constants'
-import ProgressManager from './import-progress'
+import ProgressManager from './progress-manager'
 
 export default class ImportConnectionHandler {
     /**

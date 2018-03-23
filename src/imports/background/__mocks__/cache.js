@@ -43,7 +43,10 @@ export default class Cache {
 
     async *getItems(includeErrs = false) {
         for (const chunkKey in this.chunks) {
-            yield { chunkKey, chunk: this.chunks[chunkKey] }
+            yield {
+                chunkKey: chunkKey.toString(),
+                chunk: this.chunks[chunkKey],
+            }
         }
 
         if (includeErrs) {

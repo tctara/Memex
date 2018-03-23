@@ -1,8 +1,8 @@
 import promiseLimit from 'promise-limit'
 
 import { indexQueue } from 'src/search'
-import stateManager from './import-state'
-import ItemProcessor from './import-item-processor'
+import stateManager from './state-manager'
+import ItemProcessor from './item-processor'
 
 class ImportProgressManager {
     static IMPORTS_PROGRESS_KEY = 'is-imports-in-progress'

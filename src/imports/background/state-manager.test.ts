@@ -1,10 +1,11 @@
 /* eslint-env jest */
 
-import { ImportStateManager as State } from './import-state'
+import { ImportStateManager as State } from './state-manager'
 import DataSources from './data-sources'
 import ItemCreator from './item-creator'
+import { ImportItem } from './types'
 
-import * as DATA from './import-state.test.data'
+import * as DATA from './state-manager.test.data'
 
 jest.mock('src/blacklist/background/interface')
 jest.mock('src/util/encode-url-for-id')
@@ -88,7 +89,7 @@ describe('Import items derivation', () => {
 
         // For each item in each chunk, save the URL as bookmark/history and
         for await (const { chunk } of state.fetchItems()) {
-            Object.values(chunk).forEach(item => {
+            Object.values<ImportItem>(chunk).forEach(item => {
                 if (item.type === 'h') {
                     historyItemUrls.push(item.url)
                 } else {
@@ -109,9 +110,14 @@ describe('Import items derivation', () => {
         [type]: count[type] + inc,
     })
 
-    async function forEachChunk(asyncCb, includeErrs = false) {
+    type ForEachChunkCb = (
+        values: [string, ImportItem][],
+        chunkKey: string,
+    ) => Promise<void>
+
+    async function forEachChunk(asyncCb: ForEachChunkCb, includeErrs = false) {
         for await (const { chunk, chunkKey } of state.fetchItems(includeErrs)) {
-            const values = Object.entries(chunk)
+            const values = Object.entries<ImportItem>(chunk)
 
             // Skip empty chunks
             if (!values.length) {
