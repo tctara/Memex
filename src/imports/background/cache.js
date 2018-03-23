@@ -246,9 +246,9 @@ export default class ImportCache {
     }
 
     /**
-     * @param {string} chunkKey
      * @param {string} itemKey
-     * @return {ImportItem | null} The removed import item, corresponding to `itemKey`, if exists
+     * @param {ImportItem} item
+     * @return {Promise<void>}
      */
     async flagItemAsError(itemKey, item) {
         // Don't re-add if error already exists

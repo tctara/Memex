@@ -48,7 +48,10 @@ export default class Cache {
 
         if (includeErrs) {
             for (const chunkKey in this.errChunks) {
-                yield { chunkKey, chunk: this.errChunks[chunkKey] }
+                yield {
+                    chunkKey: `err-${chunkKey}`,
+                    chunk: this.errChunks[chunkKey],
+                }
             }
         }
     }
@@ -59,7 +62,17 @@ export default class Cache {
         return toRemove
     }
 
-    async flagItemAsError(itemKey, item) {}
+    async flagItemAsError(itemKey, item) {
+        let chunkKey = !this.errChunks.length ? 0 : this.errChunks.length - 1
+        let existing = this.errChunks[chunkKey] || {}
+
+        if (Object.keys(existing) >= 10) {
+            existing = {}
+            ++chunkKey
+        }
+
+        this.errChunks[chunkKey] = { ...existing, [itemKey]: item }
+    }
 
     async clear() {
         this.expired = true

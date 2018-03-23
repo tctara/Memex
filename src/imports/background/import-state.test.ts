@@ -32,24 +32,13 @@ describe('Import items derivation', () => {
         state = new State({ itemCreator })
     })
 
+    // Clear and force re-calc for each test
     beforeEach(async () => {
         await state.clearItems()
+        await state.fetchEsts()
     })
 
-    const testInitCounts = () => {
-        expect(state.counts).toEqual(
-            expect.objectContaining({
-                completed: { h: 0, b: 0 },
-                remaining: { h: 0, b: 0 },
-            }),
-        )
-    }
-
-    test('counts get initiated', testInitCounts)
-
     test('state can get initd from cache', async () => {
-        testInitCounts() // Init counts State test should pass
-
         // Force update mock Cache with fake counts
         state._cache.counts = { ...DATA.fakeCacheCounts }
 
@@ -86,9 +75,7 @@ describe('Import items derivation', () => {
     })
 
     test('counts can be calculated (cache hit)', async () => {
-        await testEstimateCounts()
-
-        // After running estimates once, the cache should be filled
+        // The cache should already be filled from `fetchEsts` running before test
         expect(state._cache.expired).toBe(false)
 
         // Run same estimate counts test again with filled cache
@@ -96,8 +83,6 @@ describe('Import items derivation', () => {
     })
 
     test('import items can be iterated through', async () => {
-        await testEstimateCounts()
-
         const bookmarkItemUrls = []
         const historyItemUrls = []
 
@@ -124,17 +109,8 @@ describe('Import items derivation', () => {
         [type]: count[type] + inc,
     })
 
-    test('import items can be removed/marked-off', async () => {
-        await testEstimateCounts()
-
-        const histDiff = removeIntersection(DATA.histUrls, DATA.bmUrls)
-
-        // These will change as items get marked off
-        let expectedCompleted = { h: 0, b: 0 }
-        let expectedRemaining = { h: histDiff.length, b: DATA.bmUrls.length }
-
-        // Go through item chunks in state, removing the first item for each chunk, ensuring counts get updated
-        for await (const { chunk, chunkKey } of state.fetchItems()) {
+    async function forEachChunk(asyncCb, includeErrs = false) {
+        for await (const { chunk, chunkKey } of state.fetchItems(includeErrs)) {
             const values = Object.entries(chunk)
 
             // Skip empty chunks
@@ -142,8 +118,19 @@ describe('Import items derivation', () => {
                 continue
             }
 
-            // Remove first item of chunk
-            const [[itemKey, { type }]] = values
+            await asyncCb(values, chunkKey)
+        }
+    }
+
+    test('import items can be removed/marked-off', async () => {
+        const histDiff = removeIntersection(DATA.histUrls, DATA.bmUrls)
+
+        // These will change as items get marked off
+        let expectedCompleted = { h: 0, b: 0 }
+        let expectedRemaining = { h: histDiff.length, b: DATA.bmUrls.length }
+
+        // For the first item of chunk, remove it, recalc expected counts, then check
+        await forEachChunk(async ([[itemKey, { type }]], chunkKey) => {
             await state.removeItem(chunkKey, itemKey)
 
             // Update our expected values (one got checked off, so +1 completed, -1 remaining)
@@ -152,6 +139,51 @@ describe('Import items derivation', () => {
 
             expect(state.counts.completed).toEqual(expectedCompleted)
             expect(state.counts.remaining).toEqual(expectedRemaining)
-        }
+        })
+    })
+
+    test('import items can be flagged as errors', async () => {
+        const histDiff = removeIntersection(DATA.histUrls, DATA.bmUrls)
+        const flaggedUrls = []
+
+        // Remaining will change as items get marked as errors; completed won't
+        const expectedCompleted = { h: 0, b: 0 }
+        let expectedRemaining = { h: histDiff.length, b: DATA.bmUrls.length }
+
+        // For the first item of chunk, flag it, recalc expected counts, then check
+        await forEachChunk(async ([[itemKey, { type, url }]], chunkKey) => {
+            await state.flagItemAsError(chunkKey, itemKey)
+            flaggedUrls.push(url) // Keep track of the URLs we are flagging
+
+            // Update our expected values (one got checked off, so +1 completed, -1 remaining)
+            expectedRemaining = checkOff(expectedRemaining, type, -1)
+
+            expect(state.counts.completed).toEqual(expectedCompleted)
+            expect(state.counts.remaining).toEqual(expectedRemaining)
+        })
+
+        // Do another read, storing all error'd + okay item URLs
+        const errordUrls = []
+        const okayUrls = []
+        await forEachChunk(async (values, chunkKey) => {
+            const trackingArr = chunkKey.startsWith('err')
+                ? errordUrls
+                : okayUrls
+            trackingArr.push(...values.map(([, item]) => item.url))
+        }, true)
+
+        // Error'd URLs from the read should be the same as the ones we have been keeping track of
+        //  as we've been flagging
+        expect(errordUrls).toEqual(flaggedUrls)
+
+        // There should be no intersection between okay and errord URLs
+        const errordSet = new Set(errordUrls)
+        let intersected = false
+        okayUrls.forEach(url => {
+            if (errordSet.has(url)) {
+                intersected = true
+            }
+        })
+        expect(intersected).toBe(false)
     })
 })
