@@ -1,26 +1,15 @@
-export const bmUrls = [
-    'https://example.com',
-    'https://example.com/test',
-    'https://example.com/another-one',
-    'https://test.com',
-    'https://test.com/test',
-    'https://test.com/another-one',
-]
+import urlList from './url-list.test.data'
 
-export const histUrls = [
-    'https://google.com',
-    'https://google.com/test',
-    'https://google.com/?q=dogs',
-    'https://google.com/images',
-    'https://google.com/cool-stuff',
-]
+// Make first 20 in list bookmarks; overlaps with history
+export const bmUrls = urlList.slice(0, 20)
+export const histUrls = [...urlList]
 
 let idIt = 0
 
 const createBrowserItem = type => url => ({ id: idIt++, url, type })
 
 export const bookmarks = bmUrls.map(createBrowserItem('b'))
-export const history = [...bmUrls, ...histUrls].map(createBrowserItem('h'))
+export const history = histUrls.map(createBrowserItem('h'))
 
 export const fakeCacheCounts = {
     completed: { b: 42, h: 13 },

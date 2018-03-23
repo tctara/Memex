@@ -7,10 +7,16 @@ import ItemCreator from './item-creator'
 import * as DATA from './import-state.test.data'
 
 jest.mock('src/blacklist/background/interface')
+jest.mock('src/util/encode-url-for-id')
 jest.mock('src/activity-logger')
 jest.mock('src/search')
 jest.mock('./cache')
 jest.mock('./data-sources')
+
+const removeIntersection = (a = [], b = []) => {
+    const checkSet = new Set(b)
+    return a.filter(val => !checkSet.has(val))
+}
 
 describe('Import items derivation', () => {
     let state
@@ -22,7 +28,7 @@ describe('Import items derivation', () => {
             bookmarks: DATA.bookmarks,
         })
 
-        const itemCreator = new ItemCreator({ dataSources, testMode: true })
+        const itemCreator = new ItemCreator({ dataSources })
         state = new State({ itemCreator })
     })
 
@@ -62,7 +68,7 @@ describe('Import items derivation', () => {
         // Check the returned counts
         expect(counts.completed).toEqual({ h: 0, b: 0 })
         expect(counts.remaining).toEqual({
-            h: DATA.histUrls.length,
+            h: DATA.histUrls.length - DATA.bmUrls.length,
             b: DATA.bmUrls.length,
         })
 
@@ -107,34 +113,45 @@ describe('Import items derivation', () => {
         }
 
         expect(bookmarkItemUrls).toEqual(DATA.bmUrls)
-        expect(historyItemUrls).toEqual(DATA.histUrls)
+
+        // Ensure we don't check the intersecting bm URLs in expected history URLs
+        const histDiff = removeIntersection(DATA.histUrls, DATA.bmUrls)
+        expect(historyItemUrls).toEqual(histDiff)
+    })
+
+    const checkOff = (count, type, inc = 1) => ({
+        ...count,
+        [type]: count[type] + inc,
     })
 
     test('import items can be removed/marked-off', async () => {
         await testEstimateCounts()
 
-        const itemsChunkIterable = state.fetchItems()
+        const histDiff = removeIntersection(DATA.histUrls, DATA.bmUrls)
 
-        // Remove the first item of first chunk (should be bookmarks)
-        const { value: valA } = await itemsChunkIterable.next()
-        await state.removeItem(valA.chunkKey, Object.keys(valA.chunk)[0])
+        // These will change as items get marked off
+        let expectedCompleted = { h: 0, b: 0 }
+        let expectedRemaining = { h: histDiff.length, b: DATA.bmUrls.length }
 
-        // Counts should have changed (-1 bookmark)
-        expect(state.counts.completed).toEqual({ h: 0, b: 1 })
-        expect(state.counts.remaining).toEqual({
-            h: DATA.histUrls.length,
-            b: DATA.bmUrls.length - 1,
-        })
+        // Go through item chunks in state, removing the first item for each chunk, ensuring counts get updated
+        for await (const { chunk, chunkKey } of state.fetchItems()) {
+            const values = Object.entries(chunk)
 
-        // Remove the first item of first chunk (should be history)
-        const { value: valB } = await itemsChunkIterable.next()
-        await state.removeItem(valB.chunkKey, Object.keys(valB.chunk)[0])
+            // Skip empty chunks
+            if (!values.length) {
+                continue
+            }
 
-        // Counts should have changed (-1 hist)
-        expect(state.counts.completed).toEqual({ h: 1, b: 1 })
-        expect(state.counts.remaining).toEqual({
-            h: DATA.histUrls.length - 1,
-            b: DATA.bmUrls.length - 1,
-        })
+            // Remove first item of chunk
+            const [[itemKey, { type }]] = values
+            await state.removeItem(chunkKey, itemKey)
+
+            // Update our expected values (one got checked off, so +1 completed, -1 remaining)
+            expectedCompleted = checkOff(expectedCompleted, type, 1)
+            expectedRemaining = checkOff(expectedRemaining, type, -1)
+
+            expect(state.counts.completed).toEqual(expectedCompleted)
+            expect(state.counts.remaining).toEqual(expectedRemaining)
+        }
     })
 })
