@@ -5,7 +5,13 @@ import DataSources from './data-sources'
 import ItemCreator from './item-creator'
 import { ImportItem } from './types'
 
-import * as DATA from './state-manager.test.data'
+import * as urlLists from './url-list.test.data'
+import initData, { TestData } from './state-manager.test.data'
+
+type ForEachChunkCb = (
+    values: [string, ImportItem][],
+    chunkKey: string,
+) => Promise<void>
 
 jest.mock('src/blacklist/background/interface')
 jest.mock('src/util/encode-url-for-id')
@@ -14,12 +20,13 @@ jest.mock('src/search')
 jest.mock('./cache')
 jest.mock('./data-sources')
 
-const removeIntersection = (a = [], b = []) => {
+// Gets set diff `a - b`
+const diff = (a = [], b = []) => {
     const checkSet = new Set(b)
     return a.filter(val => !checkSet.has(val))
 }
 
-describe('Import items derivation', () => {
+const runSuite = (DATA: TestData) => async () => {
     let state
 
     beforeAll(() => {
@@ -58,7 +65,7 @@ describe('Import items derivation', () => {
         // Check the returned counts
         expect(counts.completed).toEqual({ h: 0, b: 0 })
         expect(counts.remaining).toEqual({
-            h: DATA.histUrls.length - DATA.bmUrls.length,
+            h: diff(DATA.histUrls, DATA.bmUrls).length,
             b: DATA.bmUrls.length,
         })
 
@@ -101,8 +108,7 @@ describe('Import items derivation', () => {
         expect(bookmarkItemUrls).toEqual(DATA.bmUrls)
 
         // Ensure we don't check the intersecting bm URLs in expected history URLs
-        const histDiff = removeIntersection(DATA.histUrls, DATA.bmUrls)
-        expect(historyItemUrls).toEqual(histDiff)
+        expect(historyItemUrls).toEqual(diff(DATA.histUrls, DATA.bmUrls))
     })
 
     const checkOff = (count, type, inc = 1) => ({
@@ -110,11 +116,7 @@ describe('Import items derivation', () => {
         [type]: count[type] + inc,
     })
 
-    type ForEachChunkCb = (
-        values: [string, ImportItem][],
-        chunkKey: string,
-    ) => Promise<void>
-
+    // Convenience function to async iterate import item chunks accessible via state instance
     async function forEachChunk(asyncCb: ForEachChunkCb, includeErrs = false) {
         for await (const { chunk, chunkKey } of state.fetchItems(includeErrs)) {
             const values = Object.entries<ImportItem>(chunk)
@@ -129,11 +131,12 @@ describe('Import items derivation', () => {
     }
 
     test('import items can be removed/marked-off', async () => {
-        const histDiff = removeIntersection(DATA.histUrls, DATA.bmUrls)
-
         // These will change as items get marked off
         let expectedCompleted = { h: 0, b: 0 }
-        let expectedRemaining = { h: histDiff.length, b: DATA.bmUrls.length }
+        let expectedRemaining = {
+            h: diff(DATA.histUrls, DATA.bmUrls).length,
+            b: DATA.bmUrls.length,
+        }
 
         // For the first item of chunk, remove it, recalc expected counts, then check
         await forEachChunk(async ([[itemKey, { type }]], chunkKey) => {
@@ -149,12 +152,13 @@ describe('Import items derivation', () => {
     })
 
     test('import items can be flagged as errors', async () => {
-        const histDiff = removeIntersection(DATA.histUrls, DATA.bmUrls)
         const flaggedUrls = []
-
         // Remaining will change as items get marked as errors; completed won't
         const expectedCompleted = { h: 0, b: 0 }
-        let expectedRemaining = { h: histDiff.length, b: DATA.bmUrls.length }
+        let expectedRemaining = {
+            h: diff(DATA.histUrls, DATA.bmUrls).length,
+            b: DATA.bmUrls.length,
+        }
 
         // For the first item of chunk, flag it, recalc expected counts, then check
         await forEachChunk(async ([[itemKey, { type, url }]], chunkKey) => {
@@ -192,4 +196,35 @@ describe('Import items derivation', () => {
         })
         expect(intersected).toBe(false)
     })
-})
+}
+
+// Run import tests against different sized history/bookmark data sets
+describe(
+    'Import items derivation (hist: 1000+, bm: 1000+)',
+    runSuite(initData(urlLists.large, urlLists.large)),
+)
+describe(
+    'Import items derivation (hist: 1000+, bm: 30)',
+    runSuite(initData(urlLists.large, urlLists.large.slice(0, 30))),
+)
+describe(
+    'Import items derivation (hist: 200+, bm: 30)',
+    runSuite(initData(urlLists.med, urlLists.med.slice(0, 30))),
+)
+describe(
+    'Import items derivation (hist: 1000+, bm: 200+) - no bm intersection',
+    runSuite(initData(urlLists.large, urlLists.med)),
+)
+describe(
+    'Import items derivation (hist: 200+, bm: 1000+) - no bm intersection',
+    runSuite(initData(urlLists.med, urlLists.large)),
+)
+describe(
+    'Import items derivation (hist: 1000+, bm: 0)',
+    runSuite(initData(urlLists.large, [])),
+)
+describe(
+    'Import items derivation (hist: 0, bm: 200+)',
+    runSuite(initData([], urlLists.med)),
+)
+describe('Import items derivation (hist: 0, bm: 0)', runSuite(initData([], [])))

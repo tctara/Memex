@@ -5,3 +5,9 @@ export interface ImportItem {
     browserId: number
     url: string
 }
+
+export interface BrowserItem {
+    id: number
+    url: string
+    type: ImportItemType
+}

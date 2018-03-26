@@ -1,17 +1,28 @@
-import urlList from './url-list.test.data'
+import { BrowserItem } from './types'
 
-// Make first 20 in list bookmarks; overlaps with history
-export const bmUrls = urlList.slice(0, 20)
-export const histUrls = [...urlList]
+export interface TestData {
+    bmUrls: string[]
+    histUrls: string[]
+    bookmarks: BrowserItem[]
+    history: BrowserItem[]
+    fakeCacheCounts: any
+}
 
-let idIt = 0
+export default function(histUrls: string[], bmUrls: string[]): TestData {
+    let idIt = 0
+    const createBrowserItem = type => url =>
+        ({ id: idIt++, url, type } as BrowserItem)
 
-const createBrowserItem = type => url => ({ id: idIt++, url, type })
+    const fakeCacheCounts = {
+        completed: { b: 42, h: 13 },
+        remaining: { b: 1, h: 27 },
+    }
 
-export const bookmarks = bmUrls.map(createBrowserItem('b'))
-export const history = histUrls.map(createBrowserItem('h'))
-
-export const fakeCacheCounts = {
-    completed: { b: 42, h: 13 },
-    remaining: { b: 1, h: 27 },
+    return {
+        bmUrls,
+        histUrls,
+        bookmarks: bmUrls.map(createBrowserItem('b')),
+        history: histUrls.map(createBrowserItem('h')),
+        fakeCacheCounts,
+    }
 }
