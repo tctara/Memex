@@ -54,8 +54,17 @@ const runSuite = (DATA: TestData) => async () => {
         const promise = progress.start()
         expect(progress.stopped).toBe(false)
 
+        // Concurrency setting is the upper-limit for # Processor instances
+        expect(progress.processors.length).toBeLessThanOrEqual(concurrency)
+
         await promise
 
+        // Should all be marked as finished now (we awaited the progress to complete)
+        progress.processors.forEach(proc =>
+            expect(proc).toEqual({ finished: true, cancelled: false }),
+        )
+
+        // Should be called # unique inputs
         const numProcessed =
             diff(DATA.histUrls, DATA.bmUrls).length + DATA.bmUrls.length
 
@@ -64,11 +73,9 @@ const runSuite = (DATA: TestData) => async () => {
         expect(observer.complete).toHaveBeenCalledTimes(1)
     }
 
-    test('concurrency setting 1', testProgress(1))
-    test('concurrency setting 5', testProgress(5))
-    test('concurrency setting 10', testProgress(10))
-    test('concurrency setting 15', testProgress(15))
-    test('concurrency setting 20', testProgress(20))
+    test('full progress (1x conc.)', testProgress(1))
+    test('full progress (10x conc)', testProgress(10))
+    test('full progress (20x conc)', testProgress(20))
 }
 
 describe(
