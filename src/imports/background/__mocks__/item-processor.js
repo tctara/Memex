@@ -1,11 +1,9 @@
-export default class {
+export default class ItemProcessor {
     finished = false
     cancelled = false
 
     process(item) {
-        return new Promise(res =>
-            setTimeout(() => res({ status: 'Success' }), 10),
-        )
+        return Promise.resolve()
     }
 
     cancel() {
