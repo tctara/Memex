@@ -73,9 +73,39 @@ const runSuite = (DATA: TestData) => async () => {
         expect(observer.complete).toHaveBeenCalledTimes(1)
     }
 
+    const testInterruptedProgress = (concurrency: number) => async () => {
+        const observer = { complete: jest.fn(), next: jest.fn() }
+        const progress = new Progress({
+            stateManager,
+            observer,
+            concurrency,
+            Processor,
+        })
+
+        expect(progress.stopped).toBe(true)
+        const promise = progress.start()
+        expect(progress.stopped).toBe(false)
+
+        // Immediately interrupt
+        progress.stop()
+
+        // Processors should all be marked as cancelled + unfinished now
+        expect(progress.processors.length).toBeLessThanOrEqual(concurrency)
+        progress.processors.forEach(proc =>
+            expect(proc).toEqual({ finished: false, cancelled: true }),
+        )
+
+        // Complete observer should not have been called
+        expect(observer.next).toHaveBeenCalledTimes(0)
+        expect(observer.complete).toHaveBeenCalledTimes(0)
+    }
+
     test('full progress (1x conc.)', testProgress(1))
     test('full progress (10x conc)', testProgress(10))
     test('full progress (20x conc)', testProgress(20))
+    test('interrupted progress (1x conc.)', testInterruptedProgress(1))
+    test('interrupted progress (10x conc)', testInterruptedProgress(10))
+    test('interrupted progress (20x conc)', testInterruptedProgress(20))
 }
 
 describe(
