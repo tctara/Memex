@@ -82,12 +82,9 @@ const runSuite = (DATA: TestData) => async () => {
             Processor,
         })
 
-        expect(progress.stopped).toBe(true)
         const promise = progress.start()
-        expect(progress.stopped).toBe(false)
-
-        // Immediately interrupt
-        progress.stop()
+        progress.stop() // Immediately interrupt
+        await promise
 
         // Processors should all be marked as cancelled + unfinished now
         expect(progress.processors.length).toBeLessThanOrEqual(concurrency)
@@ -100,12 +97,51 @@ const runSuite = (DATA: TestData) => async () => {
         expect(observer.complete).toHaveBeenCalledTimes(0)
     }
 
+    const testRestartInterruptedProgress = (
+        concurrency: number,
+    ) => async () => {
+        const observer = { complete: jest.fn(), next: jest.fn() }
+        const progress = new Progress({
+            stateManager,
+            observer,
+            concurrency,
+            Processor,
+        })
+
+        const promise = progress.start()
+        progress.stop() // Immediately interrupt
+        await promise
+        await progress.start() // Restart and wait for completion
+
+        // Run all the same "full progress" tests; should all pass same as if progress wasn't interrupted
+        progress.processors.forEach(proc =>
+            expect(proc).toEqual({ finished: true, cancelled: false }),
+        )
+        const numProcessed =
+            diff(DATA.histUrls, DATA.bmUrls).length + DATA.bmUrls.length
+        expect(observer.next).toHaveBeenCalledTimes(numProcessed)
+        expect(observer.complete).toHaveBeenCalledTimes(1)
+    }
+
+    // Run some tests at diff concurrency levels
     test('full progress (1x conc.)', testProgress(1))
     test('full progress (10x conc)', testProgress(10))
     test('full progress (20x conc)', testProgress(20))
     test('interrupted progress (1x conc.)', testInterruptedProgress(1))
     test('interrupted progress (10x conc)', testInterruptedProgress(10))
     test('interrupted progress (20x conc)', testInterruptedProgress(20))
+    test(
+        'restart interrupted progress (1x conc)',
+        testRestartInterruptedProgress(1),
+    )
+    test(
+        'restart interrupted progress (10x conc)',
+        testRestartInterruptedProgress(10),
+    )
+    test(
+        'restart interrupted progress (20x conc)',
+        testRestartInterruptedProgress(20),
+    )
 }
 
 describe(
